@@ -8,7 +8,7 @@ namespace BFV_TEST
         [TestMethod]
         public void TestBFV()
         {
-            CalculateBFV()
+            //CalculateBFV()
 
         }
     }

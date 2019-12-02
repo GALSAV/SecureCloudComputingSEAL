@@ -8,6 +8,15 @@ namespace SimpleSealTest
 {
     class Utilities
     {
+
+
+
+        public static ulong Ulong2Hex(ulong num)
+        {
+            string hexValue = num.ToString("X");
+            ulong ulongAgain = ulong.Parse(hexValue, System.Globalization.NumberStyles.HexNumber);
+            return ulongAgain;
+        }
         /// <summary>
         /// Helper function: Prints the name of the example in a fancy banner.
         /// </summary>

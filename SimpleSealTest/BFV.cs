@@ -34,7 +34,7 @@ namespace SimpleSealTest
 
         public static void Main(string[] args)
         {
-            for (ulong i = 0; i < 100; i++)
+            for (ulong i = 0; i < 50; i++)
             {
                 BFV bfv = new BFV();
                 bfv.CalculateBFV(i);
@@ -53,25 +53,27 @@ namespace SimpleSealTest
                     polynomials of degree less than the degree of the polynomial modulus
                     and coefficients integers modulo the plaintext modulus
             */
-
-            Plaintext xPlain = new Plaintext(evalVal.ToString());
+            var s = evalVal.ToString("X");
+            Plaintext xPlain = new Plaintext(s);
     
             Ciphertext xEncrypted = new Ciphertext();
             encryptor.Encrypt(xPlain, xEncrypted);
 
             Ciphertext encrypedEvaluationNaive = ComputePolynomEvaluationNaive(xEncrypted);
+            Console.WriteLine($"     ---- {decryptor.InvariantNoiseBudget(encrypedEvaluationNaive)}");
+            Plaintext decryptedResult = new Plaintext();
+            decryptor.Decrypt(encrypedEvaluationNaive, decryptedResult);
 
-            //decryptor.Decrypt(encryptedResult, decryptedResult);
-   
-            //expectedValue = (((evalVal * evalVal + 1) * (evalVal + 1) * (evalVal + 1)) * 4) % ModulosValue;
-            //if (decryptedResult[0] == expectedValue)
-            //{
-            //    Console.WriteLine($"0x{decryptedResult} ...... Correct.");
-            //}
-            //else
-            //{
-            //    Console.WriteLine($"0x{decryptedResult} ...... ERROR.");
-            //}
+            //var ulong2Hex = Utilities.Ulong2Hex(evalVal);
+            var expectedValue = (((evalVal * evalVal + 1) * (evalVal + 1) * (evalVal + 1)) * 4) % ModulosValue;
+            if (decryptedResult[0] == expectedValue)
+            {
+                Console.WriteLine($"0x{decryptedResult} ...... Correct.");
+            }
+            else
+            {
+                Console.WriteLine($"0x{decryptedResult} ...... ERROR.");
+            }
 
             // /Compute the same polinom evaluation but with relinearization
 
@@ -88,6 +90,8 @@ namespace SimpleSealTest
 
             var xSqPlusOne = XSqPlusOneRelinearization(xEncrypted);
             var xPlusOneSq = XPlusOneSqRelinearize(xEncrypted);
+
+
 
 
             //Console.WriteLine($"    + size of xSquared: {xSquared.Size}");
@@ -124,6 +128,16 @@ namespace SimpleSealTest
 
             //Utilities.PrintLine();
             var polinomEvaluation = PolinomEvaluationRelinearization(xSqPlusOne, xPlusOneSq);
+            decryptedResult = new Plaintext();
+            decryptor.Decrypt(polinomEvaluation, decryptedResult);
+            if (decryptedResult[0] == expectedValue)
+            {
+                Console.WriteLine($"0x{decryptedResult} ...... Correct.");
+            }
+            else
+            {
+                Console.WriteLine($"0x{decryptedResult} ...... ERROR.");
+            }
 
             //decryptor.Decrypt(encryptedResult, decryptedResult);
             ////Console.WriteLine("    + decryption of 4(x^2+1)(x+1)^2 = 0x{0} ...... Correct.", decryptedResult);

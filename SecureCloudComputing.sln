@@ -5,7 +5,12 @@ VisualStudioVersion = 16.0.29509.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleSealTest", "SimpleSealTest\SimpleSealTest.csproj", "{3BBAE7E5-CCEB-49C3-8F73-0D5C45D82E02}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BFV_TEST", "BFV_TEST\BFV_TEST.csproj", "{E3543E6A-DFC2-4E68-91F0-D0DF3AA60D86}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BFV_TEST", "BFV_TEST\BFV_TEST.csproj", "{E3543E6A-DFC2-4E68-91F0-D0DF3AA60D86}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "summary", "summary", "{A1A575A2-E330-4CD9-A559-4BC97C652192}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\..\..\Secure Cloud Computing\summary.txt = ..\..\..\..\Secure Cloud Computing\summary.txt
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

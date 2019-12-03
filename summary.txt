@@ -1,0 +1,109 @@
+
+
+
+  Plaintext
+  Cyphetext
+  KeyGen
+	- publicKey
+	- secretKey
+	- relinKeys
+  
+  Encryptor
+	- encrypt (uses publicKey)
+  Decryptor
+	- decryptor (uses secretKey)
+	- noise budget
+  Evaluator
+	- inplace
+	- Relinearize
+	- ModSwitchToNext
+	- ModSwitchTo
+	- RescaleToNext (?)
+	- RescaleTo		(?)
+	- NTT 			(?)
+	- ApplyGalois 	(?)
+	- ComplexConjugate (?)
+	- Functions : 
+		- Negate
+		- Add
+		- AddMany
+		- Sub
+		- Multiply
+		- Square
+		- MultiplyMany
+		- Exponentiate
+		- AddPlain
+		- SubPlain
+		- MultiplyPlain
+	- Rotation
+		- RotateRows
+		- RotateColumns
+		- RotateVector
+		* rotations do not consume any noise budget
+  SEALContext
+	- SchemeType
+	- polyModulusDegree
+	- CoeffModulus (correlation with polyModulusDegree)
+	- PlainModulus (BFV only , all operations are done mod PlainModulus) 
+
+CoeffModulus (?)	
+	-  CoeffModulus.MaxBitCount(polyModulusDegree)
+	
+BFV
+ 1. evaluate value in polinom
+ 2. works with integers modulo
+ 3. beware of overflow : plain_modulus.
+ 4. accurate results ( if no overflow )
+ 5. relinearization
+ 
+
+Encoders : 
+	2.1 Integer incoder (evalute on x = 2)
+	2.2 Batch encoder (matrix)
+	
+			In the matrix view, encrypted operations act
+            element-wise on encrypted matrices, allowing the user to obtain speeds-ups of
+            several orders of magnitude in fully vectorizable computations
+			
+			
+			Decodes the matrix as polinom
+			
+			encrypted computation is highly parallelizable
+	2.3 CKKSEncoder
+			- scheme for computing on encrypted real or complex numbers
+			- To create CKKS plaintexts we need a special encoder: there is no other way
+			  to create them
+			- In CKKS the number of slots is PolyModulusDegree / 2 and each slot encodes
+              one real or complex number
+			- The floating-point coefficients of `input'
+			   will be scaled up by the parameter `scale'
+			- it is instructive to think of the scale as determining
+			  the bit-precision of the encoding
+			  
+			  
+			  
+Levels :
+	CoeffModulus
+	Evaluator.ModSwitchToNext
+	Evaluator.ModSwitchTo
+	In BFV modulus switching is not necessary
+	
+CKKS
+	1. PolyModulusDegree 
+	2. CoeffModulus
+	3. scale - effects percision and cyphertext length
+	4. slotCount
+	5. Encoder -> CKKSEncoder
+	6. evaluator.RelinearizeInplace , evaluator.RescaleToNextInplace
+	7. evaluator can only operate on CYPHERTEXT at same level ( Plaintext is void to this )
+	
+			Encrypted addition and subtraction require that the scales of the inputs are
+            the same, and also that the encryption parameters (ParmsId) match. If there
+            is a mismatch, Evaluator will throw an exception.
+			
+			CKKS supports
+            modulus switching just like the BFV scheme, allowing us to switch away parts
+            of the coefficient modulus when it is simply not needed.
+
+Performance :
+	

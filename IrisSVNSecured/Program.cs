@@ -72,9 +72,12 @@ namespace IrisSVNSecured
                             for (int j = 0; j < this.vectors[i].Length; j++)
                             {
                                 kernel += this.vectors[i][j] * features[j];
+                                Console.WriteLine($"kernel += this.vectors[{i}][{j}] * features[{j}]");
                             }
 
                             kernels[i] = kernel;
+                            Console.WriteLine($"kernels[{i}] = {kernel}");
+                            Console.WriteLine("-----------------------------------------------------");
                         }
 
                         break;
@@ -122,6 +125,7 @@ namespace IrisSVNSecured
                         break;
                 }
 
+                Console.WriteLine("Calculate weights : ");
                 int[] starts = new int[this.nRows];
                 for (int i = 0; i < this.nRows; i++)
                 {
@@ -134,10 +138,13 @@ namespace IrisSVNSecured
                         }
 
                         starts[i] = start;
+                        Console.WriteLine($"starts[{i}] = {start}");
+
                     }
                     else
                     {
                         starts[0] = 0;
+                        Console.WriteLine($"starts[0] = 0");
                     }
                 }
 
@@ -145,6 +152,7 @@ namespace IrisSVNSecured
                 for (int i = 0; i < this.nRows; i++)
                 {
                     ends[i] = this.weights[i] + starts[i];
+                    Console.WriteLine($"ends[{i}] = this.weights[{i}] + starts[{i}]");
                 }
 
                 if (this._nClasses == 2)
@@ -159,14 +167,21 @@ namespace IrisSVNSecured
                     for (int k = starts[1]; k < ends[1]; k++)
                     {
                         decision += kernels[k] * this.coefficients[0][k];
+                        Console.WriteLine($"starts1 : decision += kernels[{k}] * this.coefficients[0][{k}]");
+                        Console.WriteLine($"starts1 : decision = {decision}");
                     }
 
                     for (int k = starts[0]; k < ends[0]; k++)
                     {
                         decision += kernels[k] * this.coefficients[0][k];
+                        Console.WriteLine($"starts0 : decision += kernels[{k}] * this.coefficients[0][{k}]");
+                        Console.WriteLine($"starts0 : decision = {decision}");
                     }
 
+                    Console.WriteLine($"Total decision = {decision}");
                     decision += this.intercepts[0];
+                    
+                    Console.WriteLine($"decision = {decision}");
 
                     if (decision > 0)
                     {
@@ -239,10 +254,10 @@ namespace IrisSVNSecured
             private double[][] coefficients;
             private double[] intercepts;
             private double gamma;
-            private double coef0;
+            //private double coef0;
             private double degree;
 
-            public IrisSVC( int nRows, double[][] vectors, double[][] coefficients, double[] intercepts, double gamma, double coef0, double degree)
+            public IrisSVC( int nRows, double[][] vectors, double[][] coefficients, double[] intercepts, double gamma/*, double coef0*/, double degree)
             {
                 //this._nClasses = nClasses;
                 //this.classes = new int[nClasses];
@@ -258,7 +273,7 @@ namespace IrisSVNSecured
                 this.intercepts = intercepts;
 
                 this.gamma = gamma;
-                this.coef0 = coef0;
+                //this.coef0 = coef0;
                 this.degree = degree;
             }
 
@@ -274,20 +289,25 @@ namespace IrisSVNSecured
                     for (int j = 0; j < this.vectors[i].Length; j++)
                     {
                         kernel += this.vectors[i][j] * features[j];
-                        Console.WriteLine($" i = {i} , j = {j}");
+                        Console.WriteLine($"kernel += this.vectors[{i}][{j}] * features[{j}]");
+                        Console.WriteLine($"kernel ( {kernel} )   += this.vectors[{i}][{j}] ({this.vectors[i][j]})  * features[{j}] ({features[j]})");
                     }
                     Console.WriteLine("-------------------------------------------------------------------------");
-                    kernels[i] = Math.Pow((this.gamma * kernel) + this.coef0, this.degree);
+                    kernels[i] = kernel; //Math.Pow((this.gamma * kernel) + this.coef0, this.degree);
+                    Console.WriteLine($"kernels[{i}] = kernel ({kernel})");
+                    Console.WriteLine("-----------------------------------------------------");
                 }
 
                 double decision = 0;
                 for (int i = 0; i < kernels.Length; i++)
                 {
                     decision += -kernels[i] * this.coefficients[0][i];
+                    Console.WriteLine($" decision ({decision}) += -kernels[{i}]  ({kernels[i]}) * this.coefficients[0][{i}] ({this.coefficients[0][i]})");
                 }
 
+                Console.WriteLine($"Total decision {decision}");
                 decision += this.intercepts[0];
-
+                Console.WriteLine($"Final decision {decision}");
                 if (decision > 0)
                 {
                     return 0;
@@ -316,6 +336,7 @@ namespace IrisSVNSecured
 
             //private int _nClasses;
             private int nRows;
+
             //private int[] classes;
             private double[][] vectors;
             private double[][] coefficients;
@@ -355,8 +376,7 @@ namespace IrisSVNSecured
                 EncryptionParameters parms = new EncryptionParameters(SchemeType.CKKS);
                 ulong polyModulusDegree = 8192;
                 parms.PolyModulusDegree = polyModulusDegree;
-                parms.CoeffModulus = CoeffModulus.Create(
-                    polyModulusDegree, new int[] { 60, 40, 40, 60 });
+                parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] {60, 40, 40, 60});
 
 
                 double scale = Math.Pow(2.0, 40);
@@ -375,25 +395,25 @@ namespace IrisSVNSecured
 
                 CKKSEncoder encoder = new CKKSEncoder(context);
 
+                Plaintext fPlaintext0 = new Plaintext();
                 Plaintext fPlaintext1 = new Plaintext();
-                Plaintext fPlaintext2 =  new Plaintext();
+                Plaintext fPlaintext2 = new Plaintext();
                 Plaintext fPlaintext3 = new Plaintext();
-                Plaintext fPlaintext4 = new Plaintext();
 
 
-                encoder.Encode(features[0], scale, fPlaintext1);
-                encoder.Encode(features[1], scale, fPlaintext2);
-                encoder.Encode(features[2], scale, fPlaintext3);
-                encoder.Encode(features[3], scale, fPlaintext4);
+                encoder.Encode(features[0], scale, fPlaintext0);
+                encoder.Encode(features[1], scale, fPlaintext1);
+                encoder.Encode(features[2], scale, fPlaintext2);
+                encoder.Encode(features[3], scale, fPlaintext3);
 
+                Ciphertext f0Encrypted = new Ciphertext();
                 Ciphertext f1Encrypted = new Ciphertext();
                 Ciphertext f2Encrypted = new Ciphertext();
                 Ciphertext f3Encrypted = new Ciphertext();
-                Ciphertext f4Encrypted = new Ciphertext();
+                encryptor.Encrypt(fPlaintext0, f0Encrypted);
                 encryptor.Encrypt(fPlaintext1, f1Encrypted);
                 encryptor.Encrypt(fPlaintext2, f2Encrypted);
                 encryptor.Encrypt(fPlaintext3, f3Encrypted);
-                encryptor.Encrypt(fPlaintext4, f4Encrypted);
 
 
 
@@ -407,6 +427,11 @@ namespace IrisSVNSecured
                 Plaintext v12Plaintext1 = new Plaintext();
                 Plaintext v13Plaintext1 = new Plaintext();
 
+                Plaintext v20Plaintext1 = new Plaintext();
+                Plaintext v21Plaintext1 = new Plaintext();
+                Plaintext v22Plaintext1 = new Plaintext();
+                Plaintext v23Plaintext1 = new Plaintext();
+
 
                 encoder.Encode(vectors[0][0], scale, v00Plaintext1);
                 encoder.Encode(vectors[0][1], scale, v01Plaintext1);
@@ -416,142 +441,140 @@ namespace IrisSVNSecured
                 encoder.Encode(vectors[1][1], scale, v11Plaintext1);
                 encoder.Encode(vectors[1][2], scale, v12Plaintext1);
                 encoder.Encode(vectors[1][3], scale, v13Plaintext1);
+                encoder.Encode(vectors[2][0], scale, v20Plaintext1);
+                encoder.Encode(vectors[2][1], scale, v21Plaintext1);
+                encoder.Encode(vectors[2][2], scale, v22Plaintext1);
+                encoder.Encode(vectors[2][3], scale, v23Plaintext1);
+
+                Plaintext coef00PlainText = new Plaintext();
+                Plaintext coef01PlainText = new Plaintext();
+                Plaintext coef02PlainText = new Plaintext();
+                encoder.Encode(coefficients[0][0], scale, coef00PlainText);
+                encoder.Encode(coefficients[0][1], scale, coef01PlainText);
+                encoder.Encode(coefficients[0][2], scale, coef02PlainText);
 
 
-                Ciphertext kernel0 = new Ciphertext();
+
                 Ciphertext tSum1 = new Ciphertext();
                 Ciphertext tSum2 = new Ciphertext();
                 Ciphertext tSum3 = new Ciphertext();
                 Ciphertext tSum4 = new Ciphertext();
-                Ciphertext tSumTotal = new Ciphertext();
-                evaluator.MultiplyPlain(f1Encrypted, v00Plaintext1, tSum1);
+                Ciphertext kernel0 = new Ciphertext();
+                evaluator.MultiplyPlain(f0Encrypted, v00Plaintext1, tSum1);
                 evaluator.MultiplyPlain(f1Encrypted, v01Plaintext1, tSum2);
-                evaluator.MultiplyPlain(f1Encrypted, v02Plaintext1, tSum3);
-                evaluator.MultiplyPlain(f1Encrypted, v02Plaintext1, tSum4);
-                var ciphertexts = new List<Ciphertext>();
-                ciphertexts.Add(tSum1);
-                ciphertexts.Add(tSum2);
-                ciphertexts.Add(tSum3);
-                ciphertexts.Add(tSum4);
-                evaluator.AddMany(ciphertexts, tSumTotal);
+                evaluator.MultiplyPlain(f2Encrypted, v02Plaintext1, tSum3);
+                evaluator.MultiplyPlain(f3Encrypted, v03Plaintext1, tSum4);
+                var ciphertexts1 = new List<Ciphertext>();
+                ciphertexts1.Add(tSum1);
+                ciphertexts1.Add(tSum2);
+                ciphertexts1.Add(tSum3);
+                ciphertexts1.Add(tSum4);
+                evaluator.AddMany(ciphertexts1, kernel0);
+
+                evaluator.AddMany(ciphertexts1, kernel0);
+                PrintCyprherText(decryptor, kernel0, encoder,"kernel0");
 
 
-                //evaluator.AddPlain();
+                Ciphertext kernel1 = new Ciphertext();
+                evaluator.MultiplyPlain(f0Encrypted, v10Plaintext1, tSum1);
+                evaluator.MultiplyPlain(f1Encrypted, v11Plaintext1, tSum2);
+                evaluator.MultiplyPlain(f2Encrypted, v12Plaintext1, tSum3);
+                evaluator.MultiplyPlain(f3Encrypted, v13Plaintext1, tSum4);
 
-                double[] kernels = new double[vectors.Length];
-                double kernel;
-                switch (this.kernel)
-                {
-                    case Kernel.Linear:
-                        // <x,x'>
-                        for (int i = 0; i < 4; i++)
-                        {
-                            kernel = 0;
-                            for (int j = 0; j < 4; j++)
-                            {
-                                kernel += this.vectors[i][j] * features[j];
-                            }
+                var ciphertexts2 = new List<Ciphertext>();
+                ciphertexts2.Add(tSum1);
+                ciphertexts2.Add(tSum2);
+                ciphertexts2.Add(tSum3);
+                ciphertexts2.Add(tSum4);
+                evaluator.AddMany(ciphertexts2, kernel1);
+                PrintCyprherText(decryptor, kernel1, encoder, "kernel1");
 
-                            kernels[i] = kernel;
-                        }
+                Ciphertext kernel2 = new Ciphertext();
+                evaluator.MultiplyPlain(f0Encrypted, v20Plaintext1, tSum1);
+                evaluator.MultiplyPlain(f1Encrypted, v21Plaintext1, tSum2);
+                evaluator.MultiplyPlain(f2Encrypted, v22Plaintext1, tSum3);
+                evaluator.MultiplyPlain(f3Encrypted, v23Plaintext1, tSum4);
 
-                        break;
-                    case Kernel.Poly:
-                        // (y<x,x'>+r)^d
-                        for (int i = 0; i < this.vectors.Length; i++)
-                        {
-                            kernel = 0;
-                            for (int j = 0; j < this.vectors[i].Length; j++)
-                            {
-                                kernel += this.vectors[i][j] * features[j];
-                            }
+                var ciphertexts3 = new List<Ciphertext>();
+                ciphertexts3.Add(tSum1);
+                ciphertexts3.Add(tSum2);
+                ciphertexts3.Add(tSum3);
+                ciphertexts3.Add(tSum4);
+                evaluator.AddMany(ciphertexts3, kernel2);
+                PrintCyprherText(decryptor, kernel2, encoder, "kernel2");
 
-                            kernels[i] = Math.Pow((this.gamma * kernel) + this.coef0, this.degree);
-                        }
 
-                        break;
-                    case Kernel.Rbf:
-                        // exp(-y|x-x'|^2)
-                        for (int i = 0; i < this.vectors.Length; i++)
-                        {
-                            kernel = 0;
-                            for (int j = 0; j < this.vectors[i].Length; j++)
-                            {
-                                kernel += Math.Pow(this.vectors[i][j] - features[j], 2);
-                            }
+                Ciphertext decision1 = new Ciphertext();
+                Ciphertext decision2 = new Ciphertext();
+                Ciphertext decision3 = new Ciphertext();
 
-                            kernels[i] = Math.Exp(-this.gamma * kernel);
-                        }
+                //evaluator.NegateInplace(kernel1);
+                //evaluator.NegateInplace(kernel2);
+                //evaluator.NegateInplace(kernel3);
+                Ciphertext nKernel0 = new Ciphertext();
+                Ciphertext nKernel1 = new Ciphertext();
+                Ciphertext nKernel2 = new Ciphertext();
 
-                        break;
-                    case Kernel.Sigmoid:
-                        // tanh(y<x,x'>+r)
-                        for (int i = 0; i < this.vectors.Length; i++)
-                        {
-                            kernel = 0;
-                            for (int j = 0; j < this.vectors[i].Length; j++)
-                            {
-                                kernel += this.vectors[i][j] * features[j];
-                            }
 
-                            kernels[i] = Math.Tanh((this.gamma * kernel) + this.coef0);
-                        }
+                evaluator.Negate(kernel0, nKernel0);
+                evaluator.Negate(kernel1, nKernel1);
+                evaluator.Negate(kernel2, nKernel2);
+                PrintScale(decision1, "decision1");
+                evaluator.MultiplyPlain(nKernel0, coef00PlainText, decision1);
+                PrintCyprherText(decryptor, decision1, encoder, "decision1");
+                evaluator.MultiplyPlain(nKernel1, coef01PlainText, decision2);
+                PrintCyprherText(decryptor, decision2, encoder, "decision2");
+                evaluator.MultiplyPlain(nKernel2, coef02PlainText, decision3);
+                PrintCyprherText(decryptor, decision3, encoder, "decision3");
 
-                        break;
-                }
+                Plaintext interceptsPlainText = new Plaintext();
 
-                //int[] starts = new int[this.nRows];
-                //for (int i = 0; i < this.nRows; i++)
-                //{
-                //    if (i != 0)
-                //    {
-                //        int start = 0;
-                //        for (int j = 0; j < i; j++)
-                //        {
-                //            start += this.weights[j];
-                //        }
+                encoder.Encode(intercepts[0], scale, interceptsPlainText);
 
-                //        starts[i] = start;
-                //    }
-                //    else
-                //    {
-                //        starts[0] = 0;
-                //    }
-                //}
+                Ciphertext interceptsCiher = new Ciphertext();
+                encryptor.Encrypt(interceptsPlainText, interceptsCiher);
+                var p = decision1.ParmsId;
+                //evaluator.RescaleToInplace(interceptsCiher,p);
+                //evaluator.ModSwitchToInplace(interceptsCiher, p);
 
-                //int[] ends = new int[this.nRows];
-                //for (int i = 0; i < this.nRows; i++)
-                //{
-                //    ends[i] = this.weights[i] + starts[i];
-                //}
+                evaluator.RelinearizeInplace(decision1,keygen.RelinKeys());
+                evaluator.RelinearizeInplace(decision2, keygen.RelinKeys());
+                evaluator.RelinearizeInplace(decision3, keygen.RelinKeys());
 
-                //if (this._nClasses == 2)
-                //{
-                double decision = 0;
-                for (int i = 0; i < kernels.Length; i++)
-                {
-                    decision += -kernels[i] * this.coefficients[0][i];
-                }
+                PrintScale(interceptsCiher, "interceptsPlainText");
+                PrintScale(interceptsCiher, "interceptsCiher");
+                PrintScale(decision1, "decision1");
 
-                //double decision = 0;
-                //Console.WriteLine($"start[1] = {starts[1]} , ends[1] = {ends[1]}");
-                //for (int k = starts[1]; k < ends[1]; k++)
-                //{
-                //    decision += kernels[k] * this.coefficients[0][k];
-                //    Console.WriteLine($"decision = {decision}   k={k}");
-                //}
+                var decisions = new List<Ciphertext>();
+                decisions.Add(decision1);
+                
+                decisions.Add(decision2);
+                decisions.Add(decision3);
+                decisions.Add(interceptsCiher);
 
-                //Console.WriteLine();
-                //Console.WriteLine($"start[0] = {starts[0]} , ends[0] = {ends[0]}");
-                //for (int k = starts[0]; k < ends[0]; k++)
-                //{
-                //    decision += kernels[k] * this.coefficients[0][k];
-                //    Console.WriteLine($"decision = {decision} k={k}");
-                //}
+                Ciphertext decisionTotal = new Ciphertext();
+               // evaluator.AddPlainInplace(decisionTotal, interceptsPlainText);
+                evaluator.AddMany(decisions, decisionTotal);
+                PrintCyprherText(decryptor, decisionTotal, encoder, "decision total");
+                //evaluator.RescaleToNextInplace(decisionTotal);
 
-                decision += this.intercepts[0];
+                //evaluator.RelinearizeInplace(decisionTotal,keygen.RelinKeys());
+                //evaluator.RescaleToNextInplace(decisionTotal);
+                Ciphertext finalTotal = new Ciphertext();
+                //evaluator.AddPlain(decisionTotal, intercepts, finalTotal);
 
-                if (decision > 0)
+
+                //evaluator.Add(decisionTotal, interceptsCiher, finalTotal);
+                evaluator.AddInplace(decisionTotal, interceptsCiher);
+                List<double> result = PrintCyprherText(decryptor, finalTotal, encoder, "finalTotal");
+
+                //Plaintext plainResult = new Plaintext();
+                //decryptor.Decrypt(finalTotal, plainResult);
+                //List<double> result = new List<double>();
+                //encoder.Decode(plainResult, result);
+
+            
+                if (result[0] > 0)
                 {
                     return 0;
                 }
@@ -560,7 +583,27 @@ namespace IrisSVNSecured
 
             }
 
+            private static void PrintScale(Ciphertext interceptsCiher,String name)
+            {
+                Console.Write($"    + Exact scale of {name}:");
+                Console.WriteLine(" {0:0.0000000000}", interceptsCiher.Scale);
+            }
+
+            private static List<double> PrintCyprherText(Decryptor decryptor, Ciphertext ciphertext, CKKSEncoder encoder,String name)
+            {
+                Plaintext plainResult = new Plaintext();
+                decryptor.Decrypt(ciphertext, plainResult);
+                List<double> result = new List<double>();
+                encoder.Decode(plainResult, result);
+
+                Console.WriteLine($"{name} result = {result[0]}");
+                return result;
+            }
+
+
         }
+
+
 
 
 
@@ -568,32 +611,83 @@ namespace IrisSVNSecured
         static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
-            if (args.Length == 4)
+            if (args.Length >= 4)
             {
-
+                var numOfcalsiffication = args.Length / 4;
                 // Features:
-                double[] features = new double[args.Length];
+                double[][] features = new double[numOfcalsiffication][];
+                for (int i = 0; i < numOfcalsiffication; i++)
+                {
+                    features[i] = new double[4];
+                }
                 for (int i = 0, l = args.Length; i < l; i++)
                 {
-                    features[i] = Double.Parse(args[i]);
+                    features[i/4][i%4] = Double.Parse(args[i]);
                 }
 
-               
 
 
-                double[][] vectors = new double[2][];
 
-                vectors[0] = new[] { 5.1, 3.3, 1.7, 0.5 };
-                vectors[1] = new[] { 5.1, 2.5, 3.0, 1.1 };
+                //double[][] vectors = new double[2][];
 
-                double[][] coefficients = new double[1][];
-                coefficients[0] = new double[] { -0.009372190880663269, 0.009372190880663269 } ;
-                double[] intercepts = { 0.9087355561683588 };
+                //vectors[0] = new[] { 5.1, 3.3, 1.7, 0.5 };
+                //vectors[1] = new[] { 5.1, 2.5, 3.0, 1.1 };
+
+                //double[][] coefficients = new double[1][];
+                //coefficients[0] = new double[] { -0.009372190880663269, 0.009372190880663269 } ;
+                //double[] intercepts = { 0.9087355561683588 };
                 //int[] weights = {1, 1};
 
-                IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
-                int estimation = clf.Predict(features);
-                Console.WriteLine($"estimation is : {estimation} ");
+
+                double[][] vectors = new double[3][];
+
+                vectors[0] = new[] { 5.1, 3.3, 1.7, 0.5 };
+                vectors[1] = new[] { 4.8, 3.4, 1.9, 0.2 };
+                vectors[2] = new[] { 5.1, 2.5, 3.0, 1.1 };
+
+                double[][] coefficients = new double[1][];
+                coefficients[0] = new double[] { -0.7407784813992192, -0.0025023664254470897, 0.7432808478246663 } ;
+                double[] intercepts = { 0.9055182807973224 };
+                int[] weights = {2, 1};
+
+                Console.WriteLine("SVC : ");
+                SVC clf = new SVC(2, 2, vectors, coefficients, intercepts, weights, "linear", 0.25, 0.0, 3);
+                //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
+
+                for (int i = 0; i < numOfcalsiffication; i++)
+                {
+                    int estimation = clf.Predict(features[i]);
+                    Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+                    Console.WriteLine($"SVC estimation{i} is : {estimation} ");
+                    Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
+                }
+
+                Console.WriteLine("\n\n IrisSVC : ");
+                IrisSVC clf2 = new IrisSVC( 2, vectors, coefficients, intercepts, 0.25 , 3);
+                //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
+               
+                for (int i = 0; i < numOfcalsiffication; i++)
+                {
+                    Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+                    int estimation = clf2.Predict(features[i]);
+                   
+                    Console.WriteLine($"IrisSVC estimation{i} is : {estimation} ");
+                    Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
+                }
+
+                Console.WriteLine("\n\n SecureSVC : ");
+                IrisSecureSVC clf3 = new IrisSecureSVC(2, vectors, coefficients, intercepts, weights, "linear", 0.25, 0.0, 3); ;
+                //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
+               
+                for (int i = 0; i < numOfcalsiffication; i++)
+                {
+                    Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+                    int estimation = clf3.Predict(features[i]);
+                    
+                    Console.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
+                    Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
+                }
+                
                 Console.WriteLine("End");
             }
 

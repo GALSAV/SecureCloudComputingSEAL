@@ -374,12 +374,11 @@ namespace IrisSVNSecured
             {
 
                 EncryptionParameters parms = new EncryptionParameters(SchemeType.CKKS);
-                ulong polyModulusDegree = 8192;
-                parms.PolyModulusDegree = polyModulusDegree;
-                parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] {60, 40, 40, 60});
+                ulong polyModulusDegree    = 8192;
+                parms.PolyModulusDegree    = polyModulusDegree;
+                parms.CoeffModulus         = CoeffModulus.Create(polyModulusDegree, new int[] { 60, 40, 40, 60 });
 
-
-                double scale = Math.Pow(2.0, 40);
+                double scale = Math.Pow(2.0, 20);
 
                 SEALContext context = new SEALContext(parms);
                 //Utilities.PrintParameters(context);
@@ -406,6 +405,11 @@ namespace IrisSVNSecured
                 encoder.Encode(features[2], scale, fPlaintext2);
                 encoder.Encode(features[3], scale, fPlaintext3);
 
+
+                PrintScale(fPlaintext0, "fPlaintext0");
+                PrintScale(fPlaintext1, "fPlaintext1");
+                PrintScale(fPlaintext2, "fPlaintext2");
+
                 Ciphertext f0Encrypted = new Ciphertext();
                 Ciphertext f1Encrypted = new Ciphertext();
                 Ciphertext f2Encrypted = new Ciphertext();
@@ -415,7 +419,9 @@ namespace IrisSVNSecured
                 encryptor.Encrypt(fPlaintext2, f2Encrypted);
                 encryptor.Encrypt(fPlaintext3, f3Encrypted);
 
-
+                PrintScale(f0Encrypted, "f0Encrypted");
+                PrintScale(f1Encrypted, "f1Encrypted");
+                PrintScale(f2Encrypted, "f2Encrypted");
 
 
                 Plaintext v00Plaintext1 = new Plaintext();
@@ -446,12 +452,36 @@ namespace IrisSVNSecured
                 encoder.Encode(vectors[2][2], scale, v22Plaintext1);
                 encoder.Encode(vectors[2][3], scale, v23Plaintext1);
 
+
+                PrintScale(v00Plaintext1, "v00Plaintext1");
+                PrintScale(v01Plaintext1, "v01Plaintext1");
+                PrintScale(v02Plaintext1, "v02Plaintext1");
+                PrintScale(v03Plaintext1, "v03Plaintext1");
+
+                PrintScale(v10Plaintext1, "v10Plaintext1");
+                PrintScale(v11Plaintext1, "v11Plaintext1");
+                PrintScale(v12Plaintext1, "v12Plaintext1");
+                PrintScale(v13Plaintext1, "v13Plaintext1");
+
+
+                PrintScale(v20Plaintext1, "v20Plaintext1");
+                PrintScale(v21Plaintext1, "v21Plaintext1");
+                PrintScale(v22Plaintext1, "v22Plaintext1");
+                PrintScale(v23Plaintext1, "v23Plaintext1");
+
+
+
                 Plaintext coef00PlainText = new Plaintext();
                 Plaintext coef01PlainText = new Plaintext();
                 Plaintext coef02PlainText = new Plaintext();
                 encoder.Encode(coefficients[0][0], scale, coef00PlainText);
                 encoder.Encode(coefficients[0][1], scale, coef01PlainText);
                 encoder.Encode(coefficients[0][2], scale, coef02PlainText);
+
+                PrintScale(coef00PlainText, "coef00PlainText");
+                PrintScale(coef01PlainText, "coef01PlainText");
+                PrintScale(coef02PlainText, "coef02PlainText");
+
 
 
 
@@ -460,53 +490,94 @@ namespace IrisSVNSecured
                 Ciphertext tSum3 = new Ciphertext();
                 Ciphertext tSum4 = new Ciphertext();
                 Ciphertext kernel0 = new Ciphertext();
+
+                //=================================================================
                 evaluator.MultiplyPlain(f0Encrypted, v00Plaintext1, tSum1);
                 evaluator.MultiplyPlain(f1Encrypted, v01Plaintext1, tSum2);
                 evaluator.MultiplyPlain(f2Encrypted, v02Plaintext1, tSum3);
                 evaluator.MultiplyPlain(f3Encrypted, v03Plaintext1, tSum4);
+                //=================================================================
+
+                PrintScale(tSum1, "tSum1");
+                PrintScale(tSum2, "tSum2");
+                PrintScale(tSum3, "tSum3");
+                PrintScale(tSum4, "tSum4");
+
+
+
                 var ciphertexts1 = new List<Ciphertext>();
                 ciphertexts1.Add(tSum1);
                 ciphertexts1.Add(tSum2);
                 ciphertexts1.Add(tSum3);
                 ciphertexts1.Add(tSum4);
-                evaluator.AddMany(ciphertexts1, kernel0);
 
+                //=================================================================
                 evaluator.AddMany(ciphertexts1, kernel0);
+                //=================================================================
+                PrintScale(kernel0, "kernel0");
+
                 PrintCyprherText(decryptor, kernel0, encoder,"kernel0");
 
 
                 Ciphertext kernel1 = new Ciphertext();
+
+
+                //=================================================================
                 evaluator.MultiplyPlain(f0Encrypted, v10Plaintext1, tSum1);
                 evaluator.MultiplyPlain(f1Encrypted, v11Plaintext1, tSum2);
                 evaluator.MultiplyPlain(f2Encrypted, v12Plaintext1, tSum3);
                 evaluator.MultiplyPlain(f3Encrypted, v13Plaintext1, tSum4);
+                //=================================================================
+
+                ciphertexts1.Add(tSum1);
+                ciphertexts1.Add(tSum2);
+                ciphertexts1.Add(tSum3);
+                ciphertexts1.Add(tSum4);
 
                 var ciphertexts2 = new List<Ciphertext>();
                 ciphertexts2.Add(tSum1);
                 ciphertexts2.Add(tSum2);
                 ciphertexts2.Add(tSum3);
                 ciphertexts2.Add(tSum4);
+                
+                
+                //=================================================================
                 evaluator.AddMany(ciphertexts2, kernel1);
+                //=================================================================
+                PrintScale(kernel1, "kernel1");
                 PrintCyprherText(decryptor, kernel1, encoder, "kernel1");
 
                 Ciphertext kernel2 = new Ciphertext();
+
+                //=================================================================
                 evaluator.MultiplyPlain(f0Encrypted, v20Plaintext1, tSum1);
                 evaluator.MultiplyPlain(f1Encrypted, v21Plaintext1, tSum2);
                 evaluator.MultiplyPlain(f2Encrypted, v22Plaintext1, tSum3);
                 evaluator.MultiplyPlain(f3Encrypted, v23Plaintext1, tSum4);
+                //=================================================================
 
                 var ciphertexts3 = new List<Ciphertext>();
                 ciphertexts3.Add(tSum1);
                 ciphertexts3.Add(tSum2);
                 ciphertexts3.Add(tSum3);
                 ciphertexts3.Add(tSum4);
-                evaluator.AddMany(ciphertexts3, kernel2);
-                PrintCyprherText(decryptor, kernel2, encoder, "kernel2");
 
+
+                //=================================================================
+                evaluator.AddMany(ciphertexts3, kernel2);
+                //=================================================================
+                PrintScale(kernel2, "kernel2");
+                
+                PrintCyprherText(decryptor, kernel2, encoder, "kernel2");
 
                 Ciphertext decision1 = new Ciphertext();
                 Ciphertext decision2 = new Ciphertext();
                 Ciphertext decision3 = new Ciphertext();
+
+
+                PrintScale(decision1, "decision1");
+                PrintScale(decision2, "decision2");
+                PrintScale(decision3, "decision3");
 
                 //evaluator.NegateInplace(kernel1);
                 //evaluator.NegateInplace(kernel2);
@@ -515,63 +586,71 @@ namespace IrisSVNSecured
                 Ciphertext nKernel1 = new Ciphertext();
                 Ciphertext nKernel2 = new Ciphertext();
 
-
+                //=================================================================
                 evaluator.Negate(kernel0, nKernel0);
                 evaluator.Negate(kernel1, nKernel1);
                 evaluator.Negate(kernel2, nKernel2);
-                PrintScale(decision1, "decision1");
+                //=================================================================
+                PrintScale(nKernel0, "nKernel0");
+                PrintScale(nKernel1, "nKernel1");
+                PrintScale(nKernel2, "nKernel2");
+
+
+
+                //=================================================================
                 evaluator.MultiplyPlain(nKernel0, coef00PlainText, decision1);
-                PrintCyprherText(decryptor, decision1, encoder, "decision1");
                 evaluator.MultiplyPlain(nKernel1, coef01PlainText, decision2);
-                PrintCyprherText(decryptor, decision2, encoder, "decision2");
                 evaluator.MultiplyPlain(nKernel2, coef02PlainText, decision3);
+                //=================================================================
+                PrintScale(decision1, "decision1");
+                PrintScale(decision2, "decision2");
+                PrintScale(decision3, "decision3");
+                PrintCyprherText(decryptor, decision1, encoder, "decision1");
+                PrintCyprherText(decryptor, decision2, encoder, "decision2");
                 PrintCyprherText(decryptor, decision3, encoder, "decision3");
 
-                Plaintext interceptsPlainText = new Plaintext();
 
-                encoder.Encode(intercepts[0], scale, interceptsPlainText);
 
-                Ciphertext interceptsCiher = new Ciphertext();
-                encryptor.Encrypt(interceptsPlainText, interceptsCiher);
-                var p = decision1.ParmsId;
-                //evaluator.RescaleToInplace(interceptsCiher,p);
-                //evaluator.ModSwitchToInplace(interceptsCiher, p);
 
-                evaluator.RelinearizeInplace(decision1,keygen.RelinKeys());
-                evaluator.RelinearizeInplace(decision2, keygen.RelinKeys());
-                evaluator.RelinearizeInplace(decision3, keygen.RelinKeys());
+                //=================================================================
+                //evaluator.RelinearizeInplace(decision1,keygen.RelinKeys());
+                //evaluator.RelinearizeInplace(decision2, keygen.RelinKeys());
+                //evaluator.RelinearizeInplace(decision3, keygen.RelinKeys());
+                //=================================================================
 
-                PrintScale(interceptsCiher, "interceptsPlainText");
-                PrintScale(interceptsCiher, "interceptsCiher");
+
                 PrintScale(decision1, "decision1");
 
                 var decisions = new List<Ciphertext>();
                 decisions.Add(decision1);
-                
                 decisions.Add(decision2);
                 decisions.Add(decision3);
-                decisions.Add(interceptsCiher);
 
                 Ciphertext decisionTotal = new Ciphertext();
-               // evaluator.AddPlainInplace(decisionTotal, interceptsPlainText);
+
+
+                //=================================================================
                 evaluator.AddMany(decisions, decisionTotal);
+                //=================================================================
+                PrintScale(decisionTotal, "decisionTotal");
                 PrintCyprherText(decryptor, decisionTotal, encoder, "decision total");
-                //evaluator.RescaleToNextInplace(decisionTotal);
 
-                //evaluator.RelinearizeInplace(decisionTotal,keygen.RelinKeys());
-                //evaluator.RescaleToNextInplace(decisionTotal);
+
                 Ciphertext finalTotal = new Ciphertext();
-                //evaluator.AddPlain(decisionTotal, intercepts, finalTotal);
+
+                Plaintext interceptsPlainText = new Plaintext();
+                double scale2 = Math.Pow(2.0, 60);
+                encoder.Encode(intercepts[0], scale2, interceptsPlainText);
+                PrintScale(interceptsPlainText, "interceptsPlainText");
+
+                //=================================================================
+                evaluator.AddPlainInplace(decisionTotal, interceptsPlainText);
+                //=================================================================
+
+                PrintScale(decisionTotal, "decisionTotal");
+                List<double> result = PrintCyprherText(decryptor, decisionTotal, encoder, "finalTotal");
 
 
-                //evaluator.Add(decisionTotal, interceptsCiher, finalTotal);
-                evaluator.AddInplace(decisionTotal, interceptsCiher);
-                List<double> result = PrintCyprherText(decryptor, finalTotal, encoder, "finalTotal");
-
-                //Plaintext plainResult = new Plaintext();
-                //decryptor.Decrypt(finalTotal, plainResult);
-                //List<double> result = new List<double>();
-                //encoder.Decode(plainResult, result);
 
             
                 if (result[0] > 0)
@@ -583,10 +662,20 @@ namespace IrisSVNSecured
 
             }
 
-            private static void PrintScale(Ciphertext interceptsCiher,String name)
+            private static void PrintScale(Ciphertext ciphertext,String name)
             {
                 Console.Write($"    + Exact scale of {name}:");
-                Console.WriteLine(" {0:0.0000000000}", interceptsCiher.Scale);
+                Console.WriteLine(" {0:0.0000000000}", ciphertext.Scale);
+                Console.WriteLine("    + Scale of {0}: {1} bits", name,
+                    Math.Log(ciphertext.Scale, newBase: 2));
+            }
+
+            private static void PrintScale(Plaintext plaintext, String name)
+            {
+                Console.Write($"    + Exact scale of {name}:");
+                Console.WriteLine(" {0:0.0000000000}", plaintext.Scale);
+                Console.WriteLine("    + Scale of {0}: {1} bits", name,
+                    Math.Log(plaintext.Scale, newBase: 2));
             }
 
             private static List<double> PrintCyprherText(Decryptor decryptor, Ciphertext ciphertext, CKKSEncoder encoder,String name)

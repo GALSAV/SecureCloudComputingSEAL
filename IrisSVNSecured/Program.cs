@@ -1,14 +1,17 @@
 ﻿using Microsoft.Research.SEAL;
+using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
+using System.Diagnostics;
 using System.IO;
-using Microsoft.VisualBasic.FileIO;
 
 namespace IrisSVNSecured
 {
     class Program
     {
-
+        private const bool RunSvc      = false;
+        private const bool RunIrisSvc  = false;
 
 
         public class SVC
@@ -305,17 +308,22 @@ namespace IrisSVNSecured
                 Console.WriteLine($"Total decision {decision}");
                 decision += this.intercepts[0];
                 Console.WriteLine($"Final decision {decision}");
+
+                using (System.IO.StreamWriter file =
+                    new System.IO.StreamWriter(
+                        @"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\IrisSVC_total.txt", true)
+                )
+                {
+                    file.WriteLine($"{decision}");
+                }
+
                 if (decision > 0)
                 {
                     return 0;
                 }
 
                 return 1;
-
             }
-
-
-
 
         }
 
@@ -343,6 +351,8 @@ namespace IrisSVNSecured
             private double gamma;
             private double coef0;
             private double degree;
+
+            private static bool firstTime = true;
             //private static Decryptor _decryptor;
 
             public IrisSecureSVC(int nRows, double[][] vectors, double[][] coefficients, double[] intercepts,
@@ -363,15 +373,26 @@ namespace IrisSVNSecured
                 this.degree = degree;
             }
 
-            public int Predict(double[] features)
+            public int Predict(double[] features,int power, bool useRelinearizeInplace,bool useReScale)
             {
-
+                //Boolean useRelinearizeInplace = true;
                 EncryptionParameters parms = new EncryptionParameters(SchemeType.CKKS);
-                ulong polyModulusDegree    = 8192;
-                parms.PolyModulusDegree    = polyModulusDegree;
-                parms.CoeffModulus         = CoeffModulus.Create(polyModulusDegree, new int[] { 60, 40, 40, 60 });
+                //ulong polyModulusDegree    = 16384;
+                if (power < 60)
+                {
+                    ulong polyModulusDegree = 8192;
+                    parms.PolyModulusDegree = polyModulusDegree;
+                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] {60, 40, 40, 60});
+                }
+                else
+                {
+                    ulong polyModulusDegree = 16384;
+                    parms.PolyModulusDegree = polyModulusDegree;
+                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 60, 60, 60, 60, 60, 60 });
+                }
+                //
 
-                double scale = Math.Pow(2.0, 20);
+                double scale = Math.Pow(2.0, power);
 
                 SEALContext context = new SEALContext(parms);
                 //Utilities.PrintParameters(context);
@@ -468,13 +489,6 @@ namespace IrisSVNSecured
                 Plaintext coef01PlainText = new Plaintext();
                 Plaintext coef02PlainText = new Plaintext();
 
-                encoder.Encode(coefficients[0][0], scale, coef00PlainText);
-                encoder.Encode(coefficients[0][1], scale, coef01PlainText);
-                encoder.Encode(coefficients[0][2], scale, coef02PlainText);
-
-                PrintScale(coef00PlainText, "coef00PlainText");
-                PrintScale(coef01PlainText, "coef01PlainText");
-                PrintScale(coef02PlainText, "coef02PlainText");
 
                 Ciphertext tSum1 = new Ciphertext();
                 Ciphertext tSum2 = new Ciphertext();
@@ -489,11 +503,25 @@ namespace IrisSVNSecured
                 evaluator.MultiplyPlain(f2Encrypted, v02Plaintext1, tSum3);
                 evaluator.MultiplyPlain(f3Encrypted, v03Plaintext1, tSum4);
                 //=================================================================
-                Console.WriteLine("RelinearizeInplace sums 1");
-                evaluator.RelinearizeInplace(tSum1,relinKeys);
-                evaluator.RelinearizeInplace(tSum2,relinKeys);
-                evaluator.RelinearizeInplace(tSum3,relinKeys);
-                evaluator.RelinearizeInplace(tSum4,relinKeys);
+                
+                if (useRelinearizeInplace)
+                {
+                    Console.WriteLine("RelinearizeInplace sums 1");
+                    evaluator.RelinearizeInplace(tSum1, relinKeys);
+                    evaluator.RelinearizeInplace(tSum2, relinKeys);
+                    evaluator.RelinearizeInplace(tSum3, relinKeys);
+                    evaluator.RelinearizeInplace(tSum4, relinKeys);
+                }
+
+                if (useReScale)
+                {
+                    Console.WriteLine("useReScale sums 1");
+                    evaluator.RescaleToNextInplace(tSum1);
+                    evaluator.RescaleToNextInplace(tSum2);
+                    evaluator.RescaleToNextInplace(tSum3);
+                    evaluator.RescaleToNextInplace(tSum4);
+                }
+
 
                 PrintScale(tSum1, "tSum1"); //Level 2
                 PrintScale(tSum2, "tSum2"); //Level 2
@@ -521,12 +549,23 @@ namespace IrisSVNSecured
                 evaluator.MultiplyPlain(f2Encrypted, v12Plaintext1, tSum3);
                 evaluator.MultiplyPlain(f3Encrypted, v13Plaintext1, tSum4);
                 //=================================================================
+                if (useRelinearizeInplace)
+                {
+                    Console.WriteLine("RelinearizeInplace sums 2");
+                    evaluator.RelinearizeInplace(tSum1, relinKeys);
+                    evaluator.RelinearizeInplace(tSum2, relinKeys);
+                    evaluator.RelinearizeInplace(tSum3, relinKeys);
+                    evaluator.RelinearizeInplace(tSum4, relinKeys);
+                }
 
-                Console.WriteLine("RelinearizeInplace sums 2");
-                evaluator.RelinearizeInplace(tSum1, relinKeys);
-                evaluator.RelinearizeInplace(tSum2, relinKeys);
-                evaluator.RelinearizeInplace(tSum3, relinKeys);
-                evaluator.RelinearizeInplace(tSum4, relinKeys);
+                if (useReScale)
+                {
+                    Console.WriteLine("useReScale sums 2");
+                    evaluator.RescaleToNextInplace(tSum1);
+                    evaluator.RescaleToNextInplace(tSum2);
+                    evaluator.RescaleToNextInplace(tSum3);
+                    evaluator.RescaleToNextInplace(tSum4);
+                }
 
                 ciphertexts1.Add(tSum1);
                 ciphertexts1.Add(tSum2);
@@ -564,13 +603,25 @@ namespace IrisSVNSecured
                 evaluator.MultiplyPlain(f3Encrypted, v23Plaintext1, tSum4);
                 //=================================================================
 
+                if (useRelinearizeInplace)
+                {
+                    Console.WriteLine("RelinearizeInplace sums 3");
+                    evaluator.RelinearizeInplace(tSum1, relinKeys);
+                    evaluator.RelinearizeInplace(tSum2, relinKeys);
+                    evaluator.RelinearizeInplace(tSum3, relinKeys);
+                    evaluator.RelinearizeInplace(tSum4, relinKeys);
+                }
 
-                Console.WriteLine("RelinearizeInplace sums 3");
-                evaluator.RelinearizeInplace(tSum1, relinKeys);
-                evaluator.RelinearizeInplace(tSum2, relinKeys);
-                evaluator.RelinearizeInplace(tSum3, relinKeys);
-                evaluator.RelinearizeInplace(tSum4, relinKeys);
 
+
+                if (useReScale)
+                {
+                    Console.WriteLine("useReScale sums 3");
+                    evaluator.RescaleToNextInplace(tSum1);
+                    evaluator.RescaleToNextInplace(tSum2);
+                    evaluator.RescaleToNextInplace(tSum3);
+                    evaluator.RescaleToNextInplace(tSum4);
+                }
 
                 var ciphertexts3 = new List<Ciphertext>();
                 ciphertexts3.Add(tSum1);
@@ -609,9 +660,44 @@ namespace IrisSVNSecured
                 evaluator.Negate(kernel1, nKernel1); //Level 2
                 evaluator.Negate(kernel2, nKernel2); //Level 2
                 //=================================================================
-                PrintScale(nKernel0, "nKernel0");   //Level 2
+
+
+
+                //nKernel0.Scale = scale; 
+                //nKernel1.Scale = scale;
+                //nKernel2.Scale = scale;
+                double scale2 = Math.Pow(2.0, power);
+                if (useReScale)
+                {
+                    scale2 = nKernel0.Scale;
+                }
+
+                encoder.Encode(coefficients[0][0], scale2, coef00PlainText);
+                encoder.Encode(coefficients[0][1], scale2, coef01PlainText);
+                encoder.Encode(coefficients[0][2], scale2, coef02PlainText);
+
+                PrintScale(coef00PlainText, "coef00PlainText");
+                PrintScale(coef01PlainText, "coef01PlainText");
+                PrintScale(coef02PlainText, "coef02PlainText");
+
+
+
+                if (useReScale)
+                {
+                    ParmsId lastParmsId = nKernel0.ParmsId;
+                    evaluator.ModSwitchToInplace(coef00PlainText, lastParmsId);
+
+
+                    lastParmsId = nKernel1.ParmsId;
+                    evaluator.ModSwitchToInplace(coef01PlainText, lastParmsId);
+
+                    lastParmsId = nKernel2.ParmsId;
+                    evaluator.ModSwitchToInplace(coef02PlainText, lastParmsId);
+                }
+
+                PrintScale(nKernel0,  "nKernel0");   //Level 2
                 PrintScale(nKernel1, "nKernel1");   //Level 2
-                PrintScale(nKernel2, "nKernel2");   //Level 2
+                PrintScale(nKernel2,  "nKernel2");   //Level 2
 
                 //Level 2->3
                 //=================================================================
@@ -619,10 +705,30 @@ namespace IrisSVNSecured
                 evaluator.MultiplyPlain(nKernel1, coef01PlainText, decision2);
                 evaluator.MultiplyPlain(nKernel2, coef02PlainText, decision3);
                 //=================================================================
-                Console.WriteLine("RelinearizeInplace decisions");
-                evaluator.RelinearizeInplace(decision1, relinKeys);
-                evaluator.RelinearizeInplace(decision2, relinKeys);
-                evaluator.RelinearizeInplace(decision3, relinKeys);
+
+
+
+
+
+                if (useRelinearizeInplace)
+                {
+                    Console.WriteLine("RelinearizeInplace decisions");
+
+                    evaluator.RelinearizeInplace(decision1, relinKeys);
+                    evaluator.RelinearizeInplace(decision2, relinKeys);
+                    evaluator.RelinearizeInplace(decision3, relinKeys);
+                }
+
+
+                if (useReScale)
+                {
+                    Console.WriteLine("Rescale decisions");
+
+                    evaluator.RescaleToNextInplace(decision1);
+                    evaluator.RescaleToNextInplace(decision2);
+                    evaluator.RescaleToNextInplace(decision3);
+                }
+
 
                 PrintScale(decision1, "decision1"); //Level 3
                 PrintScale(decision2, "decision2"); //Level 3
@@ -657,9 +763,21 @@ namespace IrisSVNSecured
                 Ciphertext finalTotal = new Ciphertext();
 
                 Plaintext interceptsPlainText = new Plaintext();
-                double scale2 = Math.Pow(2.0, 60);
-                encoder.Encode(intercepts[0], scale2, interceptsPlainText);
+                
+                double scale3 = Math.Pow(2.0, power*3);
+                if (useReScale)
+                {
+                    scale3 = decisionTotal.Scale;
+                }
+                encoder.Encode(intercepts[0], scale3, interceptsPlainText);
+                if (useReScale)
+                {
+                    ParmsId lastParmsId = decisionTotal.ParmsId;
+                    evaluator.ModSwitchToInplace(interceptsPlainText, lastParmsId);
+                }
+
                 PrintScale(interceptsPlainText, "interceptsPlainText");
+                PrintScale(decisionTotal, "decisionTotal");
 
                 //=================================================================
                 evaluator.AddPlainInplace(decisionTotal, interceptsPlainText);
@@ -667,6 +785,14 @@ namespace IrisSVNSecured
 
                 PrintScale(decisionTotal, "decisionTotal");  //Level 3
                 List<double> result = PrintCyprherText(decryptor, decisionTotal, encoder, "finalTotal");
+                using (System.IO.StreamWriter file =
+                    new System.IO.StreamWriter(
+                        $@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !firstTime)
+                )
+                {
+                    firstTime = false;
+                    file.WriteLine($"{result[0]}");
+                }
 
                 if (result[0] > 0)
                 {
@@ -711,25 +837,29 @@ namespace IrisSVNSecured
         static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
+            double[][] features;
+            int numOfRows = 0;
             if (args.Length >= 4)
             {
-                //var numOfcalsiffication = args.Length / 4;
-                //// Features:
-                //double[][] features = new double[numOfcalsiffication][];
-                //for (int i = 0; i < numOfcalsiffication; i++)
-                //{
-                //    features[i] = new double[4];
-                //}
-                //for (int i = 0, l = args.Length; i < l; i++)
-                //{
-                //    features[i/4][i%4] = Double.Parse(args[i]);
-                //}
-                //double[][] features; = new double[numOfcalsiffication][];
+                numOfRows = args.Length / 4;
+                // Features:
+                features = new double[numOfRows][];
+                for (int i = 0; i < numOfRows; i++)
+                {
+                    features[i] = new double[4];
+                }
+                for (int i = 0, l = args.Length; i < l; i++)
+                {
+                    features[i/4][i%4] = Double.Parse(args[i]);
+                }
+            }
+            else
+            {
                 List<double[]> rows = new List<double[]>();
                 //var path = @"D:\GAL\Workspace\SecureCloudComputing\svm\com\data\iris.data";
                 var bytes = Properties.Resources.iris;
-                int numOfRows = 0;
-                int numOfColums = 0;
+                numOfRows = 0;
+                //int numOfColums = 0;
                 Stream stream = new MemoryStream(bytes);
                 using (TextFieldParser csvParser = new TextFieldParser(stream))
                 {
@@ -747,7 +877,7 @@ namespace IrisSVNSecured
                         // Read current line fields, pointer moves to the next line.
                         string[] readFields = csvParser.ReadFields();
                         double[] doubleValues = new double[readFields.Length];
-                        numOfColums = readFields.Length;
+                        //numOfColums = readFields.Length;
 
                         for (int j = 0; j < 4; j++)
                         {
@@ -758,35 +888,28 @@ namespace IrisSVNSecured
                     }
                 }
 
-                double[][] features = new double[numOfRows][];
+                features = new double[numOfRows][];
                 for (int i = 0; i < numOfRows; i++)
                 {
 
                     features[i] = rows[i]; //new double[numOfColums];
                 }
-
-                //double[][] vectors = new double[2][];
-
-                //vectors[0] = new[] { 5.1, 3.3, 1.7, 0.5 };
-                //vectors[1] = new[] { 5.1, 2.5, 3.0, 1.1 };
-
-                //double[][] coefficients = new double[1][];
-                //coefficients[0] = new double[] { -0.009372190880663269, 0.009372190880663269 } ;
-                //double[] intercepts = { 0.9087355561683588 };
-                //int[] weights = {1, 1};
+            }
 
 
-                double[][] vectors = new double[3][];
+            double[][] vectors = new double[3][];
 
-                vectors[0] = new[] { 5.1, 3.3, 1.7, 0.5 };
-                vectors[1] = new[] { 4.8, 3.4, 1.9, 0.2 };
-                vectors[2] = new[] { 5.1, 2.5, 3.0, 1.1 };
+            vectors[0] = new[] {5.1, 3.3, 1.7, 0.5};
+            vectors[1] = new[] {4.8, 3.4, 1.9, 0.2};
+            vectors[2] = new[] {5.1, 2.5, 3.0, 1.1};
 
-                double[][] coefficients = new double[1][];
-                coefficients[0] = new double[] { -0.7407784813992192, -0.0025023664254470897, 0.7432808478246663 } ;
-                double[] intercepts = { 0.9055182807973224 };
-                int[] weights = {2, 1};
+            double[][] coefficients = new double[1][];
+            coefficients[0] = new double[] {-0.7407784813992192, -0.0025023664254470897, 0.7432808478246663};
+            double[] intercepts = {0.9055182807973224};
+            int[] weights = {2, 1};
 
+            if (RunSvc)
+            {
                 Console.WriteLine("SVC : ");
                 SVC clf = new SVC(2, 2, vectors, coefficients, intercepts, weights, "linear", 0.25, 0.0, 3);
                 //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
@@ -803,12 +926,14 @@ namespace IrisSVNSecured
                         file.WriteLine($"SVC estimation{i} is : {estimation} ");
                         Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
                     }
-
                 }
+            }
 
 
+            if (RunIrisSvc)
+            {
                 Console.WriteLine("\n\n IrisSVC : ");
-                IrisSVC clf2 = new IrisSVC( 2, vectors, coefficients, intercepts, 0.25 , 3);
+                IrisSVC clf2 = new IrisSVC(2, vectors, coefficients, intercepts, 0.25, 3);
                 //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
                 using (System.IO.StreamWriter file =
                     new System.IO.StreamWriter(
@@ -826,26 +951,44 @@ namespace IrisSVNSecured
                     }
                 }
 
-                Console.WriteLine("\n\n SecureSVC : ");
-                IrisSecureSVC clf3 = new IrisSecureSVC(2, vectors, coefficients, intercepts, weights, "linear", 0.25, 0.0, 3); ;
-                //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
-
-                using (System.IO.StreamWriter file =
-                    new System.IO.StreamWriter(@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\IrisSecureSVC.txt"))
-                {
-                    for (int i = 0; i < numOfRows; i++)
-                    {
-                        Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-                        int estimation = clf3.Predict(features[i]);
-                        file.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
-                        Console.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
-                        Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
-                    }
-                }
-
-                
-                Console.WriteLine("End , press Enter to quit");
             }
+
+
+            Console.WriteLine("\n\n SecureSVC : ");
+            IrisSecureSVC clf3 =
+                new IrisSecureSVC(2, vectors, coefficients, intercepts, weights, "linear", 0.25, 0.0, 3);
+            ;
+            //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
+            int scale = 120;
+            bool useRelinearizeInplace = true;
+            bool useReScale = true;
+
+            using (System.IO.StreamWriter file =
+                new System.IO.StreamWriter(
+                    $@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\IrisSecureSVC_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
+            )
+            {
+                Stopwatch timePredictSum = new Stopwatch();
+                for (int i = 0; i < numOfRows; i++)
+                {
+                    Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+
+                    timePredictSum.Start();
+                    int estimation = clf3.Predict(features[i],scale,useRelinearizeInplace,useReScale);
+                    timePredictSum.Stop();
+                    file.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
+                    Console.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
+                    Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
+                }
+                
+                int avgPredict = (int)(timePredictSum.Elapsed.TotalMilliseconds * 1000 / numOfRows);
+                Console.WriteLine($"Average Predict: {avgPredict} microseconds");
+                file.WriteLine($"Average Predict: {avgPredict} microseconds");
+            }
+
+
+            Console.WriteLine("End , press Enter to quit");
+
 
             Console.ReadLine();
 

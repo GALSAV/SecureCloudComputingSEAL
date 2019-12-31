@@ -1,6 +1,8 @@
 ﻿using Microsoft.Research.SEAL;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using Microsoft.VisualBasic.FileIO;
 
 namespace IrisSVNSecured
 {
@@ -287,10 +289,10 @@ namespace IrisSVNSecured
                         Console.WriteLine($"kernel += this.vectors[{i}][{j}] * features[{j}]");
                         Console.WriteLine($"kernel ( {kernel} )   += this.vectors[{i}][{j}] ({this.vectors[i][j]})  * features[{j}] ({features[j]})");
                     }
-                    Console.WriteLine("-------------------------------------------------------------------------");
+                    Console.WriteLine(@"-------------------------------------------------------------------------");
                     kernels[i] = kernel; //Math.Pow((this.gamma * kernel) + this.coef0, this.degree);
-                    Console.WriteLine($"kernels[{i}] = kernel ({kernel})");
-                    Console.WriteLine("-----------------------------------------------------");
+                    Console.WriteLine($@"kernels[{i}] = kernel ({kernel})");
+                    Console.WriteLine(@"-----------------------------------------------------");
                 }
 
                 double decision = 0;
@@ -487,6 +489,11 @@ namespace IrisSVNSecured
                 evaluator.MultiplyPlain(f2Encrypted, v02Plaintext1, tSum3);
                 evaluator.MultiplyPlain(f3Encrypted, v03Plaintext1, tSum4);
                 //=================================================================
+                Console.WriteLine("RelinearizeInplace sums 1");
+                evaluator.RelinearizeInplace(tSum1,relinKeys);
+                evaluator.RelinearizeInplace(tSum2,relinKeys);
+                evaluator.RelinearizeInplace(tSum3,relinKeys);
+                evaluator.RelinearizeInplace(tSum4,relinKeys);
 
                 PrintScale(tSum1, "tSum1"); //Level 2
                 PrintScale(tSum2, "tSum2"); //Level 2
@@ -515,10 +522,18 @@ namespace IrisSVNSecured
                 evaluator.MultiplyPlain(f3Encrypted, v13Plaintext1, tSum4);
                 //=================================================================
 
+                Console.WriteLine("RelinearizeInplace sums 2");
+                evaluator.RelinearizeInplace(tSum1, relinKeys);
+                evaluator.RelinearizeInplace(tSum2, relinKeys);
+                evaluator.RelinearizeInplace(tSum3, relinKeys);
+                evaluator.RelinearizeInplace(tSum4, relinKeys);
+
                 ciphertexts1.Add(tSum1);
                 ciphertexts1.Add(tSum2);
                 ciphertexts1.Add(tSum3);
                 ciphertexts1.Add(tSum4);
+
+
 
                 Console.WriteLine("Second time : ");
                 PrintScale(tSum1, "tSum1"); //Level 2
@@ -548,7 +563,16 @@ namespace IrisSVNSecured
                 evaluator.MultiplyPlain(f2Encrypted, v22Plaintext1, tSum3);
                 evaluator.MultiplyPlain(f3Encrypted, v23Plaintext1, tSum4);
                 //=================================================================
-               var ciphertexts3 = new List<Ciphertext>();
+
+
+                Console.WriteLine("RelinearizeInplace sums 3");
+                evaluator.RelinearizeInplace(tSum1, relinKeys);
+                evaluator.RelinearizeInplace(tSum2, relinKeys);
+                evaluator.RelinearizeInplace(tSum3, relinKeys);
+                evaluator.RelinearizeInplace(tSum4, relinKeys);
+
+
+                var ciphertexts3 = new List<Ciphertext>();
                 ciphertexts3.Add(tSum1);
                 ciphertexts3.Add(tSum2);
                 ciphertexts3.Add(tSum3);
@@ -595,15 +619,17 @@ namespace IrisSVNSecured
                 evaluator.MultiplyPlain(nKernel1, coef01PlainText, decision2);
                 evaluator.MultiplyPlain(nKernel2, coef02PlainText, decision3);
                 //=================================================================
+                Console.WriteLine("RelinearizeInplace decisions");
+                evaluator.RelinearizeInplace(decision1, relinKeys);
+                evaluator.RelinearizeInplace(decision2, relinKeys);
+                evaluator.RelinearizeInplace(decision3, relinKeys);
+
                 PrintScale(decision1, "decision1"); //Level 3
                 PrintScale(decision2, "decision2"); //Level 3
                 PrintScale(decision3, "decision3"); //Level 3
                 PrintCyprherText(decryptor, decision1, encoder, "decision1");
                 PrintCyprherText(decryptor, decision2, encoder, "decision2");
                 PrintCyprherText(decryptor, decision3, encoder, "decision3");
-
-
-
 
                 //=================================================================
                 //evaluator.RelinearizeInplace(decision1,keygen.RelinKeys());
@@ -682,29 +708,62 @@ namespace IrisSVNSecured
         }
 
 
-
-
-
-
         static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
             if (args.Length >= 4)
             {
-                var numOfcalsiffication = args.Length / 4;
-                // Features:
-                double[][] features = new double[numOfcalsiffication][];
-                for (int i = 0; i < numOfcalsiffication; i++)
+                //var numOfcalsiffication = args.Length / 4;
+                //// Features:
+                //double[][] features = new double[numOfcalsiffication][];
+                //for (int i = 0; i < numOfcalsiffication; i++)
+                //{
+                //    features[i] = new double[4];
+                //}
+                //for (int i = 0, l = args.Length; i < l; i++)
+                //{
+                //    features[i/4][i%4] = Double.Parse(args[i]);
+                //}
+                //double[][] features; = new double[numOfcalsiffication][];
+                List<double[]> rows = new List<double[]>();
+                //var path = @"D:\GAL\Workspace\SecureCloudComputing\svm\com\data\iris.data";
+                var bytes = Properties.Resources.iris;
+                int numOfRows = 0;
+                int numOfColums = 0;
+                Stream stream = new MemoryStream(bytes);
+                using (TextFieldParser csvParser = new TextFieldParser(stream))
                 {
-                    features[i] = new double[4];
+                    csvParser.CommentTokens = new string[] { "#" };
+                    csvParser.SetDelimiters(new string[] { "," });
+                    csvParser.HasFieldsEnclosedInQuotes = true;
+
+                    //features; = new double[numOfcalsiffication][];
+                    // Skip the row with the column names
+                    //csvParser.ReadLine();
+
+
+                    while (!csvParser.EndOfData)
+                    {
+                        // Read current line fields, pointer moves to the next line.
+                        string[] readFields = csvParser.ReadFields();
+                        double[] doubleValues = new double[readFields.Length];
+                        numOfColums = readFields.Length;
+
+                        for (int j = 0; j < 4; j++)
+                        {
+                            doubleValues[j] = Double.Parse(readFields[j]);
+                        }
+                        rows.Add(doubleValues);
+                        numOfRows++;
+                    }
                 }
-                for (int i = 0, l = args.Length; i < l; i++)
+
+                double[][] features = new double[numOfRows][];
+                for (int i = 0; i < numOfRows; i++)
                 {
-                    features[i/4][i%4] = Double.Parse(args[i]);
+
+                    features[i] = rows[i]; //new double[numOfColums];
                 }
-
-
-
 
                 //double[][] vectors = new double[2][];
 
@@ -731,40 +790,59 @@ namespace IrisSVNSecured
                 Console.WriteLine("SVC : ");
                 SVC clf = new SVC(2, 2, vectors, coefficients, intercepts, weights, "linear", 0.25, 0.0, 3);
                 //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
-
-                for (int i = 0; i < numOfcalsiffication; i++)
+                using (System.IO.StreamWriter file =
+                    new System.IO.StreamWriter(
+                        @"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\SVC.txt")
+                )
                 {
-                    int estimation = clf.Predict(features[i]);
-                    Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-                    Console.WriteLine($"SVC estimation{i} is : {estimation} ");
-                    Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
+                    for (int i = 0; i < numOfRows; i++)
+                    {
+                        int estimation = clf.Predict(features[i]);
+                        Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+                        Console.WriteLine($"SVC estimation{i} is : {estimation} ");
+                        file.WriteLine($"SVC estimation{i} is : {estimation} ");
+                        Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
+                    }
+
                 }
+
 
                 Console.WriteLine("\n\n IrisSVC : ");
                 IrisSVC clf2 = new IrisSVC( 2, vectors, coefficients, intercepts, 0.25 , 3);
                 //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
-               
-                for (int i = 0; i < numOfcalsiffication; i++)
+                using (System.IO.StreamWriter file =
+                    new System.IO.StreamWriter(
+                        @"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\IrisSVC.txt")
+                )
                 {
-                    Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-                    int estimation = clf2.Predict(features[i]);
-                   
-                    Console.WriteLine($"IrisSVC estimation{i} is : {estimation} ");
-                    Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
+                    for (int i = 0; i < numOfRows; i++)
+                    {
+                        Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+                        int estimation = clf2.Predict(features[i]);
+
+                        Console.WriteLine($"IrisSVC estimation{i} is : {estimation} ");
+                        file.WriteLine($"IrisSVC estimation{i} is : {estimation} ");
+                        Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
+                    }
                 }
 
                 Console.WriteLine("\n\n SecureSVC : ");
                 IrisSecureSVC clf3 = new IrisSecureSVC(2, vectors, coefficients, intercepts, weights, "linear", 0.25, 0.0, 3); ;
                 //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
-               
-                for (int i = 0; i < numOfcalsiffication; i++)
+
+                using (System.IO.StreamWriter file =
+                    new System.IO.StreamWriter(@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\IrisSecureSVC.txt"))
                 {
-                    Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-                    int estimation = clf3.Predict(features[i]);
-                    
-                    Console.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
-                    Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
+                    for (int i = 0; i < numOfRows; i++)
+                    {
+                        Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+                        int estimation = clf3.Predict(features[i]);
+                        file.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
+                        Console.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
+                        Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
+                    }
                 }
+
                 
                 Console.WriteLine("End , press Enter to quit");
             }

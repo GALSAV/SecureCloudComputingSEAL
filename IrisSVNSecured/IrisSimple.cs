@@ -8,7 +8,7 @@ using System.IO;
 
 namespace IrisSVNSecured
 {
-    class Program
+    class IrisSimple
     {
         private const bool RunSvc      = false;
         private const bool RunIrisSvc  = false;
@@ -411,6 +411,10 @@ namespace IrisSVNSecured
                 ulong slotCount = encoder.SlotCount;
                 
                 Console.WriteLine($"Number of slots: {slotCount}");
+
+                //var featuresLength = features.Length;
+
+
 
                 Plaintext fPlaintext0 = new Plaintext();
                 Plaintext fPlaintext1 = new Plaintext();
@@ -834,7 +838,7 @@ namespace IrisSVNSecured
         }
 
 
-        static void Main(string[] args)
+        static void Main0(string[] args)
         {
             Console.WriteLine("Hello World!");
             double[][] features;
@@ -959,7 +963,7 @@ namespace IrisSVNSecured
                 new IrisSecureSVC(2, vectors, coefficients, intercepts, weights, "linear", 0.25, 0.0, 3);
             ;
             //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
-            int scale = 120;
+            int scale = 40;
             bool useRelinearizeInplace = true;
             bool useReScale = true;
 

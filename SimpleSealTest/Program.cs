@@ -4,7 +4,7 @@ using System;
 
 namespace SimpleSealTest
 {
-    class Program
+    class IrisSvmTrivial
     {
         private static void Main(string[] args)
         {

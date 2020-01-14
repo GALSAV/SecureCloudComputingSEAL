@@ -9,7 +9,7 @@ using System.IO;
 
 namespace IrisSVNSecured
 {
-    class Program
+    class IrisGeneral
     {
         private const bool RunSvc      = false;
         private const bool RunIrisSvc  = false;
@@ -628,7 +628,7 @@ namespace IrisSVNSecured
         }
 
 
-        static void Main(string[] args)
+        static void S(string[] args)
         {
             Console.WriteLine("Hello World!");
             double[][] features;

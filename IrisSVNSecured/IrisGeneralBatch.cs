@@ -500,26 +500,6 @@ namespace IrisSVNSecured
                    
                     kernels[i] = sums[i];
 
-                    ////inner product
-                    //for (int j = 0; j < numOfcolumns; j++)
-                    //{
-                    //    evaluator.MultiplyPlain(featuresCiphertexts[j], svPlaintexts[i, j], sums[j]);
-
-                    //    if (useRelinearizeInplace)
-                    //    {
-                    //        evaluator.RelinearizeInplace(sums[j], relinKeys);
-                    //    }
-
-                    //    if (useReScale)
-                    //    {
-                    //        evaluator.RescaleToNextInplace(sums[j]);
-                    //    }
-
-                    //    PrintScale(sums[j], "tSum" + j); 
-
-                    //}
-
-                    //evaluator.AddMany(sums, kernels[i]);
 
                     evaluator.NegateInplace(kernels[i]);
 
@@ -670,7 +650,7 @@ namespace IrisSVNSecured
         }
 
 
-        static void Main0(string[] args)
+        static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
             double[][] features;

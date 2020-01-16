@@ -378,17 +378,18 @@ namespace IrisSVNSecured
             {
                 EncryptionParameters parms = new EncryptionParameters(SchemeType.CKKS);
 
-                if (power < 60)
+                if (power < 20)
                 {
                     ulong polyModulusDegree = 8192;
                     parms.PolyModulusDegree = polyModulusDegree;
-                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] {50, 30, 30, 30, 50});
+                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] {40, 40, 40, 40, 40});
                 }
                 else
                 {
                     ulong polyModulusDegree = 16384;
                     parms.PolyModulusDegree = polyModulusDegree;
-                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 60, 60, 60, 60, 60, 60 });
+                    //parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 40, 40, 40, 40, 40,40,40,40,40,40 });
+                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 60, 40, 40, 40, 40,40,40,40,60 });
                 }
                 //
 
@@ -486,8 +487,7 @@ namespace IrisSVNSecured
                     }
                     
 					kernels[i] = sums[i];
-					evaluator.MultiplyPlainInplace(kernels[i], gamaPlaintext);
-
+                    PrintScale(kernels[i], "0. kernels" + i);
                     if (useRelinearizeInplace)
                     {
                         evaluator.RelinearizeInplace(kernels[i], relinKeys);
@@ -497,33 +497,49 @@ namespace IrisSVNSecured
                     {
                         evaluator.RescaleToNextInplace(kernels[i]);
                     }
+
+                    PrintScale(kernels[i], "1. kernels" + i);
+                    //kernels[i].Scale = scale;
+                    if (useReScale)
+                    {
+                            ParmsId lastParmsId = kernels[i].ParmsId;
+                            evaluator.ModSwitchToInplace(gamaPlaintext, lastParmsId);
+                    }
+                    evaluator.MultiplyPlainInplace(kernels[i], gamaPlaintext);
+                    PrintScale(kernels[i], "2. kernels" + i);
+                    if (useRelinearizeInplace)
+                    {
+                        evaluator.RelinearizeInplace(kernels[i], relinKeys);
+                    }
+
+                    if (useReScale)
+                    {
+                        evaluator.RescaleToNextInplace(kernels[i]);
+                    }
+                    PrintScale(kernels[i], "2.5  kernels" + i);
                     //evaluator.AddPlainInplace(kernels[i], coef0Plaintext);
-                    evaluator.ExponentiateInplace(kernels[i],degree,keygen.RelinKeys());
-
-                    if (useRelinearizeInplace)
+                    for (int d = 0; d < (int)degree; d++)
                     {
-                        evaluator.RelinearizeInplace(kernels[i], relinKeys);
-                    }
+                        evaluator.MultiplyInplace(kernels[i], kernels[i]);
+                        PrintScale(kernels[i], d+"  3. kernels" + i);
+                        if (useRelinearizeInplace)
+                        {
+                            evaluator.RelinearizeInplace(kernels[i], relinKeys);
+                        }
 
-                    if (useReScale)
-                    {
-                        evaluator.RescaleToNextInplace(kernels[i]);
+                        if (useReScale)
+                        {
+                            evaluator.RescaleToNextInplace(kernels[i]);
+                        }
+                        PrintScale(kernels[i], d + " rescale  3. kernels" + i);
                     }
+                    PrintScale(kernels[i], "4. kernels" + i);
 
-                    //kernels[i]
 
                     evaluator.NegateInplace(kernels[i]);
-                    if (useRelinearizeInplace)
-                    {
-                        evaluator.RelinearizeInplace(kernels[i], relinKeys);
-                    }
 
-                    if (useReScale)
-                    {
-                        evaluator.RescaleToNextInplace(kernels[i]);
-                    }
 
-                    PrintScale(kernels[i], "kernel"+i); 
+                    PrintScale(kernels[i], "5. kernel"+i); 
 
                     PrintCyprherText(decryptor, kernels[i], encoder, "kernel"+i);
 

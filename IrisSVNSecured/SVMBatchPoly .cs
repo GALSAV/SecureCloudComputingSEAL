@@ -9,11 +9,11 @@ using System.IO;
 
 namespace IrisSVNSecured
 {
-    class IrisGeneralBatchPoly
+    class SVMBatchPoly
     {
-        private const bool RunSvc      = false;
+        private const bool RunSvc      = true;
         private const bool RunIrisSvc  = false;
-
+        private const string Path = @"D:\SVC.txt";
 
         public class SVC
         {
@@ -78,12 +78,12 @@ namespace IrisSVNSecured
                             for (int j = 0; j < this.vectors[i].Length; j++)
                             {
                                 kernel += this.vectors[i][j] * features[j];
-                                Console.WriteLine($"kernel += this.vectors[{i}][{j}] * features[{j}]");
+                                //Console.WriteLine($"kernel += this.vectors[{i}][{j}] * features[{j}]");
                             }
 
                             kernels[i] = kernel;
-                            Console.WriteLine($"kernels[{i}] = {kernel}");
-                            Console.WriteLine("-----------------------------------------------------");
+                            //Console.WriteLine($"kernels[{i}] = {kernel}");
+                            //Console.WriteLine("-----------------------------------------------------");
                         }
 
                         break;
@@ -131,7 +131,7 @@ namespace IrisSVNSecured
                         break;
                 }
 
-                Console.WriteLine("Calculate weights : ");
+                //Console.WriteLine("Calculate weights : ");
                 int[] starts = new int[this.nRows];
                 for (int i = 0; i < this.nRows; i++)
                 {
@@ -144,13 +144,13 @@ namespace IrisSVNSecured
                         }
 
                         starts[i] = start;
-                        Console.WriteLine($"starts[{i}] = {start}");
+                        //Console.WriteLine($"starts[{i}] = {start}");
 
                     }
                     else
                     {
                         starts[0] = 0;
-                        Console.WriteLine($"starts[0] = 0");
+                        //Console.WriteLine($"starts[0] = 0");
                     }
                 }
 
@@ -158,7 +158,7 @@ namespace IrisSVNSecured
                 for (int i = 0; i < this.nRows; i++)
                 {
                     ends[i] = this.weights[i] + starts[i];
-                    Console.WriteLine($"ends[{i}] = this.weights[{i}] + starts[{i}]");
+                    //Console.WriteLine($"ends[{i}] = this.weights[{i}] + starts[{i}]");
                 }
 
                 if (this._nClasses == 2)
@@ -173,21 +173,21 @@ namespace IrisSVNSecured
                     for (int k = starts[1]; k < ends[1]; k++)
                     {
                         decision += kernels[k] * this.coefficients[0][k];
-                        Console.WriteLine($"starts1 : decision += kernels[{k}] * this.coefficients[0][{k}]");
-                        Console.WriteLine($"starts1 : decision = {decision}");
+                        //Console.WriteLine($"starts1 : decision += kernels[{k}] * this.coefficients[0][{k}]");
+                        //Console.WriteLine($"starts1 : decision = {decision}");
                     }
 
                     for (int k = starts[0]; k < ends[0]; k++)
                     {
                         decision += kernels[k] * this.coefficients[0][k];
-                        Console.WriteLine($"starts0 : decision += kernels[{k}] * this.coefficients[0][{k}]");
-                        Console.WriteLine($"starts0 : decision = {decision}");
+                        //Console.WriteLine($"starts0 : decision += kernels[{k}] * this.coefficients[0][{k}]");
+                        //Console.WriteLine($"starts0 : decision = {decision}");
                     }
 
-                    Console.WriteLine($"Total decision = {decision}");
+                    //Console.WriteLine($"Total decision = {decision}");
                     decision += this.intercepts[0];
                     
-                    Console.WriteLine($"decision = {decision}");
+                    //Console.WriteLine($"decision = {decision}");
 
                     if (decision > 0)
                     {
@@ -352,12 +352,22 @@ namespace IrisSVNSecured
             private double gamma;
             private double coef0;
             private ulong degree;
+            private readonly int power;
+            private SEALContext context;
+            private PublicKey   publicKey;
+            private SecretKey   secretKey;
+            private RelinKeys   relinKeys;
+            private GaloisKeys  galoisKeys;
+            private Encryptor   encryptor;
+            private Evaluator   evaluator;
+            private Decryptor   decryptor;
+            private CKKSEncoder encoder;
 
             private static bool firstTime = true;
             //private static Decryptor _decryptor;
 
             public IrisSecureSVC(int nRows, double[][] vectors, double[][] coefficients, double[] intercepts,
-                int[] weights, String kernel, double gamma, double coef0, ulong degree)
+                int[] weights, String kernel, double gamma, double coef0, ulong degree , int power)
             {
 
 
@@ -372,43 +382,43 @@ namespace IrisSVNSecured
                 this.gamma = gamma;
                 this.coef0 = coef0;
                 this.degree = degree;
-            }
-
-            public int Predict(double[] features,int power, bool useRelinearizeInplace,bool useReScale)
-            {
+                this.power = power;
                 EncryptionParameters parms = new EncryptionParameters(SchemeType.CKKS);
 
                 if (power < 20)
                 {
                     ulong polyModulusDegree = 8192;
                     parms.PolyModulusDegree = polyModulusDegree;
-                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] {40, 40, 40, 40, 40});
+                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 40, 40, 40, 40, 40 });
                 }
                 else
                 {
                     ulong polyModulusDegree = 16384;
                     parms.PolyModulusDegree = polyModulusDegree;
                     //parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 40, 40, 40, 40, 40,40,40,40,40,40 });
-                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 60, 40, 40, 40, 40,40,40,40,60 });
+                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 60, 40, 40, 40, 40, 40, 40, 40, 60 });
                 }
                 //
 
-                double scale = Math.Pow(2.0, power);
-
-                SEALContext context = new SEALContext(parms);
-               
-                Console.WriteLine();
+                context = new SEALContext(parms);
 
                 KeyGenerator keygen = new KeyGenerator(context);
-                PublicKey publicKey = keygen.PublicKey;
-                SecretKey secretKey = keygen.SecretKey;
-                RelinKeys relinKeys = keygen.RelinKeys();
-                var galoisKeys = keygen.GaloisKeys();
-                Encryptor encryptor = new Encryptor(context, publicKey);
-                Evaluator evaluator = new Evaluator(context);
-                Decryptor decryptor = new Decryptor(context, secretKey);
+                publicKey = keygen.PublicKey;
+                secretKey = keygen.SecretKey;
+                relinKeys = keygen.RelinKeys();
+                galoisKeys = keygen.GaloisKeys();
 
-                CKKSEncoder encoder = new CKKSEncoder(context);
+                encryptor = new Encryptor(context, publicKey);
+                evaluator = new Evaluator(context);
+                decryptor = new Decryptor(context, secretKey);
+                encoder = new CKKSEncoder(context);
+            }
+
+            public int Predict(double[] features, bool useRelinearizeInplace,bool useReScale)
+            {
+
+               
+                Console.WriteLine();
 
                 ulong slotCount = encoder.SlotCount;
                 
@@ -418,14 +428,12 @@ namespace IrisSVNSecured
 
 
 
-
-
                 var plaintexts  = new Plaintext();
                 var featuresCiphertexts = new Ciphertext();
 
 
                 //Encode and encrypt features
-
+                double scale = Math.Pow(2.0, power);
                 encoder.Encode(features, scale, plaintexts);
                 encryptor.Encrypt(plaintexts, featuresCiphertexts);
                 PrintScale(plaintexts, "featurePlaintext");
@@ -434,7 +442,7 @@ namespace IrisSVNSecured
                 // Handle SV
                 var numOfrows    = vectors.Length;
                 var numOfcolumns = vectors[0].Length;
-                int numOfRotations = (int)Math.Ceiling(Math.Log2(numOfcolumns));
+           
                 var svPlaintexts = new Plaintext[numOfrows];
 
                 //Encode SV
@@ -476,13 +484,13 @@ namespace IrisSVNSecured
                     var ciphertexts = new List<Ciphertext>();
 
                     evaluator.MultiplyPlain(featuresCiphertexts, svPlaintexts[i],sums[i]);
+                    int numOfRotations = (int)Math.Ceiling(Math.Log2(numOfcolumns));
                     //inner product
                     for (int k = 1; k <= numOfRotations+1/*(int)encoder.SlotCount*/ / 2; k <<= 1)
                     {
                         Ciphertext tempCt = new Ciphertext();
                         evaluator.RotateVector(sums[i], k, galoisKeys, tempCt);
                         evaluator.AddInplace(sums[i], tempCt);
-                        //Console.WriteLine("######################   : " +k);
 
                     }
                     
@@ -505,23 +513,15 @@ namespace IrisSVNSecured
                             ParmsId lastParmsId = kernels[i].ParmsId;
                             evaluator.ModSwitchToInplace(gamaPlaintext, lastParmsId);
                     }
-                    evaluator.MultiplyPlainInplace(kernels[i], gamaPlaintext);
-                    PrintScale(kernels[i], "2. kernels" + i);
-                    if (useRelinearizeInplace)
-                    {
-                        evaluator.RelinearizeInplace(kernels[i], relinKeys);
-                    }
 
-                    if (useReScale)
+                    if(kernel == Kernel.Linear)
                     {
-                        evaluator.RescaleToNextInplace(kernels[i]);
+
                     }
-                    PrintScale(kernels[i], "2.5  kernels" + i);
-                    evaluator.AddPlainInplace(kernels[i], coef0Plaintext);
-                    for (int d = 0; d < (int)degree; d++)
+                    else
                     {
-                        evaluator.MultiplyInplace(kernels[i], kernels[i]);
-                        PrintScale(kernels[i], d+"  3. kernels" + i);
+                        evaluator.MultiplyPlainInplace(kernels[i], gamaPlaintext);
+                        PrintScale(kernels[i], "2. kernels" + i);
                         if (useRelinearizeInplace)
                         {
                             evaluator.RelinearizeInplace(kernels[i], relinKeys);
@@ -531,9 +531,27 @@ namespace IrisSVNSecured
                         {
                             evaluator.RescaleToNextInplace(kernels[i]);
                         }
-                        PrintScale(kernels[i], d + " rescale  3. kernels" + i);
+                        PrintScale(kernels[i], "2.5  kernels" + i);
+                        evaluator.AddPlainInplace(kernels[i], coef0Plaintext);
+                        for (int d = 0; d < (int)degree; d++)
+                        {
+                            evaluator.MultiplyInplace(kernels[i], kernels[i]);
+                            PrintScale(kernels[i], d + "  3. kernels" + i);
+                            if (useRelinearizeInplace)
+                            {
+                                evaluator.RelinearizeInplace(kernels[i], relinKeys);
+                            }
+
+                            if (useReScale)
+                            {
+                                evaluator.RescaleToNextInplace(kernels[i]);
+                            }
+                            PrintScale(kernels[i], d + " rescale  3. kernels" + i);
+                        }
+                        PrintScale(kernels[i], "4. kernels" + i);
                     }
-                    PrintScale(kernels[i], "4. kernels" + i);
+
+
 
 
                     evaluator.NegateInplace(kernels[i]);
@@ -741,7 +759,7 @@ namespace IrisSVNSecured
 
             double[][] vectors = new double[3][];
 
-            vectors[0] = new[] {5.1, 3.3, 1.7, 0.5};
+            vectors[0] = new[] { 5.1, 3.3, 1.7, 0.5 };
             vectors[1] = new[] { 4.5, 2.3, 1.3, 0.3 };
             vectors[2] = new[] { 5.1, 2.5, 3.0, 1.1 };
 
@@ -753,11 +771,11 @@ namespace IrisSVNSecured
             if (RunSvc)
             {
                 Console.WriteLine("SVC : ");
-                SVC clf = new SVC(2, 2, vectors, coefficients, intercepts, weights, "linear", 0.25, 0.0, 3);
+                SVC clf = new SVC(2, 2, vectors, coefficients, intercepts, weights, "poly", 0.25, 0.0, 3);
                 //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
                 using (System.IO.StreamWriter file =
                     new System.IO.StreamWriter(
-                        @"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\SVC.txt")
+                        Path)
                 )
                 {
                     for (int i = 0; i < numOfRows; i++)
@@ -797,13 +815,14 @@ namespace IrisSVNSecured
 
 
             Console.WriteLine("\n\n SecureSVC : ");
+            int scale = 40;
             IrisSecureSVC clf3 =
-                new IrisSecureSVC(2, vectors, coefficients, intercepts, weights, "poly", 0.25, 0.0, 3);
+                new IrisSecureSVC(2, vectors, coefficients, intercepts, weights, "poly", 0.25, 0.0, 3,scale);
             ;
             //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
-            int scale = 40;
-            bool useRelinearizeInplace = true;
-            bool useReScale = true;
+            
+            bool useRelinearizeInplace = false;
+            bool useReScale = false;
 
             using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(
@@ -816,7 +835,7 @@ namespace IrisSVNSecured
                     Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
 
                     timePredictSum.Start();
-                    int estimation = clf3.Predict(features[i],scale,useRelinearizeInplace,useReScale);
+                    int estimation = clf3.Predict(features[i],useRelinearizeInplace,useReScale);
                     timePredictSum.Stop();
                     file.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
                     Console.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");

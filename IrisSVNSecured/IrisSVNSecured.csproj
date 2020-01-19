@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.0</TargetFramework>
-    <StartupObject>IrisSVNSecured.IrisGeneralBatchPoly</StartupObject>
+    <StartupObject>IrisSVNSecured.SVMBatchPoly</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>

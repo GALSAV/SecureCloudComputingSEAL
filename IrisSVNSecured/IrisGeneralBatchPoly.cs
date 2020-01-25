@@ -388,8 +388,8 @@ namespace IrisSVNSecured
                 {
                     ulong polyModulusDegree = 16384;
                     parms.PolyModulusDegree = polyModulusDegree;
-                    //parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 40, 40, 40, 40, 40,40,40,40,40,40 });
-                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 60, 40, 40, 40, 40,40,40,40,60 });
+                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 40, 40, 40, 40, 40,40,40,40,40,40 });
+                   // parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree, new int[] { 60, 40, 40, 40, 40,40,40,40,60 });
                 }
                 //
 
@@ -517,7 +517,7 @@ namespace IrisSVNSecured
                         evaluator.RescaleToNextInplace(kernels[i]);
                     }
                     PrintScale(kernels[i], "2.5  kernels" + i);
-                    evaluator.AddPlainInplace(kernels[i], coef0Plaintext);
+                   // evaluator.AddPlainInplace(kernels[i], coef0Plaintext);
                     for (int d = 0; d < (int)degree; d++)
                     {
                         evaluator.MultiplyInplace(kernels[i], kernels[i]);

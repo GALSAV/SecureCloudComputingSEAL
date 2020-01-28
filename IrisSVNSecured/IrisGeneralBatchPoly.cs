@@ -11,7 +11,7 @@ namespace IrisSVNSecured
 {
     class IrisGeneralBatchPoly
     {
-        private const bool RunSvc      = false;
+        private const bool RunSvc      = true;
         private const bool RunIrisSvc  = false;
 
 
@@ -97,7 +97,11 @@ namespace IrisSVNSecured
                                 kernel += this.vectors[i][j] * features[j];
                             }
 
-                            kernels[i] = Math.Pow((this.gamma * kernel) + this.coef0, this.degree);
+                            var d = (this.gamma * kernel);
+
+                            kernels[i] = Math.Pow(d + this.coef0, this.degree);
+                            Console.WriteLine($"kernels[{i}] =  {kernels[i]} kernel = {kernel} d= {d}");
+                            Console.WriteLine("-----------------------------------------------------");
                         }
 
                         break;
@@ -167,6 +171,8 @@ namespace IrisSVNSecured
                     for (int i = 0; i < kernels.Length; i++)
                     {
                         kernels[i] = -kernels[i];
+                        Console.WriteLine($"kernels[{i}] = " +kernels[i]);
+                        Console.WriteLine("-----------------------------------------------------");
                     }
 
                     double decision = 0;
@@ -487,6 +493,8 @@ namespace IrisSVNSecured
                     }
                     
 					kernels[i] = sums[i];
+					PrintCyprherText(decryptor, kernels[i], encoder, "@@@@   kernel" + i);
+
                     PrintScale(kernels[i], "0. kernels" + i);
                     if (useRelinearizeInplace)
                     {
@@ -506,6 +514,7 @@ namespace IrisSVNSecured
                             evaluator.ModSwitchToInplace(gamaPlaintext, lastParmsId);
                     }
                     evaluator.MultiplyPlainInplace(kernels[i], gamaPlaintext);
+                    PrintCyprherText(decryptor, kernels[i], encoder, "!!!!!!   kernel" + i);
                     PrintScale(kernels[i], "2. kernels" + i);
                     if (useRelinearizeInplace)
                     {
@@ -517,10 +526,17 @@ namespace IrisSVNSecured
                         evaluator.RescaleToNextInplace(kernels[i]);
                     }
                     PrintScale(kernels[i], "2.5  kernels" + i);
+                    var kernel = new Ciphertext(kernels[i]);
                    // evaluator.AddPlainInplace(kernels[i], coef0Plaintext);
-                    for (int d = 0; d < (int)degree; d++)
+                    for (int d = 0; d < (int)degree-1; d++)
                     {
-                        evaluator.MultiplyInplace(kernels[i], kernels[i]);
+	                    kernel.Scale = kernels[i].Scale;
+	                    if (useReScale)
+	                    {
+		                    ParmsId lastParmsId = kernels[i].ParmsId;
+		                    evaluator.ModSwitchToInplace(kernel, lastParmsId);
+	                    }
+                        evaluator.MultiplyInplace(kernels[i], kernel);
                         PrintScale(kernels[i], d+"  3. kernels" + i);
                         if (useRelinearizeInplace)
                         {
@@ -753,7 +769,7 @@ namespace IrisSVNSecured
             if (RunSvc)
             {
                 Console.WriteLine("SVC : ");
-                SVC clf = new SVC(2, 2, vectors, coefficients, intercepts, weights, "linear", 0.25, 0.0, 3);
+                SVC clf = new SVC(2, 2, vectors, coefficients, intercepts, weights, "poly", 0.25, 0.0, 3);
                 //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
                 using (System.IO.StreamWriter file =
                     new System.IO.StreamWriter(

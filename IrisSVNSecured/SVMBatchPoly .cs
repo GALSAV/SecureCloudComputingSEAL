@@ -97,8 +97,9 @@ namespace IrisSVNSecured
 							{
 								kernel += this._vectors[i][j] * features[j];
 							}
-
+							Console.WriteLine($"inner product result {i} : {kernel}");
 							kernels[i] = Math.Pow((this._gamma * kernel) + this._coef0, this._degree);
+							Console.WriteLine($"kernels[{i}] = {kernels[i]}");
 						}
 
 						break;
@@ -266,7 +267,7 @@ namespace IrisSVNSecured
 			}
 
 			//private int _nClasses;
-			private int _nRows;
+			//private int _nRows;
 
 			//private int[] classes;
 			private readonly double[][]		_vectors;
@@ -300,7 +301,7 @@ namespace IrisSVNSecured
 			{
 
 
-				this._nRows			= nRows;
+				//this._nRows			= nRows;
 
 				this._vectors		= vectors;
 				this._coefficients	= coefficients;
@@ -315,19 +316,25 @@ namespace IrisSVNSecured
 				EncryptionParameters parms = new EncryptionParameters(SchemeType.CKKS);
 
 				ulong polyModulusDegree = 16384;
-				parms.PolyModulusDegree = polyModulusDegree;
+				
 				if (power >= 20 && power < 40 )
 				{
 					parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree,
 						new int[] { 60, 20, 21, 22, 23, 24, 25, 26, 27, 60 });
 				}
-				else if (power >= 40 && power <= 60)
+				else if (power >= 40 && power < 60)
 				{
 					parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree,
 						new int[] { 60, 40, 40, 40, 40, 40, 40, 40 , 60 });
 				}
-
-				_context = new SEALContext(parms);
+				else if (power == 60)
+				{
+					polyModulusDegree = 32768;
+                    parms.CoeffModulus = CoeffModulus.Create(polyModulusDegree,
+						new int[] { 60, 60, 60, 60, 60, 60, 60, 60, 60 });
+				}
+				parms.PolyModulusDegree = polyModulusDegree;
+                _context = new SEALContext(parms);
 
 				KeyGenerator keygen = new KeyGenerator(_context);
 				_publicKey = keygen.PublicKey;
@@ -367,30 +374,26 @@ namespace IrisSVNSecured
 				PrintScale(featuresCiphertexts, "featurefEncrypted");
 
 				// Handle SV
-				var numOfrows    = _vectors.Length;
-				var numOfcolumns = _vectors[0].Length;
+				var numOfrowsCount    = _vectors.Length;
+				var numOfcolumnsCount = _vectors[0].Length;
 		   
-				var svPlaintexts = new Plaintext[numOfrows];
+				var svPlaintexts = new Plaintext[numOfrowsCount];
 
-				//Encode SV
-				for (int i = 0; i < numOfrows; i++)
+                //Encode SV
+                var sums = new Ciphertext[numOfrowsCount];
+                for (int i = 0; i < numOfrowsCount; i++)
 				{
 						svPlaintexts[i] = new Plaintext();
 						_encoder.Encode(_vectors[i], scale, svPlaintexts[i]);
 						PrintScale(svPlaintexts[i], "supportVectorsPlaintext"+i);
-				}
-				// Prepare sum of inner product
-				var sums = new Ciphertext[numOfcolumns];
-				for (int i = 0; i < numOfcolumns; i++)
-				{
-					sums[i] = new Ciphertext();
-				}
+						sums[i] = new Ciphertext();
+                }
 
-				var kernels      = new Ciphertext[numOfrows];
-				var decisionsArr = new Ciphertext[numOfrows];
-				var coefArr      = new Plaintext [numOfrows];
+				var kernels      = new Ciphertext[numOfrowsCount];
+				var decisionsArr = new Ciphertext[numOfrowsCount];
+				var coefArr      = new Plaintext [numOfrowsCount];
 
-				for (int i = 0; i < numOfrows; i++)
+				for (int i = 0; i < numOfrowsCount; i++)
 				{
 					kernels[i]       = new Ciphertext();
 					decisionsArr[i]  = new Ciphertext();
@@ -399,39 +402,42 @@ namespace IrisSVNSecured
 				Plaintext  gamaPlaintext= new Plaintext();
 				_encoder.Encode(_gamma, scale, gamaPlaintext);
 
+				Ciphertext tempCt = new Ciphertext();
 
 
-				// Level 1
-				for (int i = 0; i < numOfrows; i++)
+                // Level 1
+                for (int i = 0; i < numOfrowsCount; i++)
 				{
-					var ciphertexts = new List<Ciphertext>();
+					//Console.WriteLine(i);
 
-					//inner product
-					_evaluator.MultiplyPlain(featuresCiphertexts, svPlaintexts[i],sums[i]);
-					int numOfRotations = (int)Math.Ceiling(Math.Log2(numOfcolumns));
-					
-					for (int k = 1; k <= numOfRotations+1/*(int)encoder.SlotCount*/ / 2; k <<= 1)
-					{
-						Ciphertext tempCt = new Ciphertext();
-						_evaluator.RotateVector(sums[i], k, _galoisKeys, tempCt);
-						_evaluator.AddInplace(sums[i], tempCt);
+                    //inner product
+                    _evaluator.MultiplyPlain(featuresCiphertexts, svPlaintexts[i],sums[i]);
+                    int numOfRotations = (int)Math.Ceiling(Math.Log2(numOfcolumnsCount));
 
-					}
-					
-					kernels[i] = sums[i];
-					PrintScale(kernels[i], "0. kernels" + i);
-					if (useRelinearizeInplace)
-					{
-						_evaluator.RelinearizeInplace(kernels[i], _relinKeys);
-					}
+                    for (int k = 1,m=1; m <= numOfRotations/*(int)encoder.SlotCount/2*/; k <<= 1,m++)
+                    {
 
-					if (useReScale)
-					{
-						_evaluator.RescaleToNextInplace(kernels[i]);
-					}
+                        _evaluator.RotateVector(sums[i], k, _galoisKeys, tempCt);
+                        _evaluator.AddInplace(sums[i], tempCt);
 
-					PrintScale(kernels[i], "1. kernels" + i);
-					//kernels[i].Scale = scale;
+                    }
+
+                    kernels[i] = sums[i];
+
+                    PrintCyprherText(_decryptor, kernels[i], _encoder, $"inner product result {i}" );
+                    PrintScale(kernels[i], "0. kernels" + i);
+                    if (useRelinearizeInplace)
+                    {
+                        _evaluator.RelinearizeInplace(kernels[i], _relinKeys);
+                    }
+
+                    if (useReScale)
+                    {
+                        _evaluator.RescaleToNextInplace(kernels[i]);
+                    }
+
+                    PrintScale(kernels[i], "1. kernels" + i);
+                    kernels[i].Scale = scale;
 
 
 					if(_kernel == Kernel.Poly)
@@ -516,7 +522,7 @@ namespace IrisSVNSecured
 					scale2 = kernels[0].Scale;
 				}
 
-				for (int i = 0; i < numOfrows; i++)
+				for (int i = 0; i < numOfrowsCount; i++)
 				{
 					_encoder.Encode(_coefficients[0][i], scale2, coefArr[i]);
 					PrintScale(coefArr[i], "coefPlainText"+i);
@@ -526,7 +532,7 @@ namespace IrisSVNSecured
 
 				if (useReScale)
 				{
-					for (int i = 0; i < numOfrows; i++)
+					for (int i = 0; i < numOfrowsCount; i++)
 					{
 						ParmsId lastParmsId = kernels[i].ParmsId;
 						_evaluator.ModSwitchToInplace(coefArr[i], lastParmsId);
@@ -534,7 +540,7 @@ namespace IrisSVNSecured
 				}
 				// Level 2
 				// Calculate decisionArr
-				for (int i = 0; i < numOfrows; i++)
+                for (int i = 0; i < numOfrowsCount; i++)
 				{
 					_evaluator.MultiplyPlain(kernels[i], coefArr[i], decisionsArr[i]);
 					if (useRelinearizeInplace)

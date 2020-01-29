@@ -69,5 +69,15 @@ namespace IrisSVNSecured.Properties {
                 return ((byte[])(obj));
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] mashrooms {
+            get {
+                object obj = ResourceManager.GetObject("mashrooms", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
     }
 }

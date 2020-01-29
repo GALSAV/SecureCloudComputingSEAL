@@ -684,7 +684,7 @@ namespace IrisSVNSecured
                 List<double> result = new List<double>();
                 encoder.Decode(plainResult, result);
 
-                Console.WriteLine($"{name} result = {result[0]}");
+                Console.WriteLine($"{name} TotalValue = {result[0]}");
                 return result;
             }
 

@@ -6,7 +6,9 @@ using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Threading;
 using System.Threading.Channels;
+using System.Threading.Tasks;
 
 namespace IrisSVNSecured
 {
@@ -37,6 +39,19 @@ namespace IrisSVNSecured
 			return jaggedArray;
 		}
 	}
+
+	class Result
+	{
+		public double TotalValue;
+		public int Estimation;
+
+		public Result(double totalValue, int estimation)
+		{
+			this.TotalValue = totalValue;
+			this.Estimation = estimation;
+		}
+	}
+
     class SVMBatchPolyMashroom
     {
 		private const bool   RunSvc      = false;
@@ -126,7 +141,7 @@ namespace IrisSVNSecured
 							{
 								kernel += this._vectors[i][j] * features[j];
 							}
-							Console.WriteLine($"inner product result {i} : {kernel}");
+							Console.WriteLine($"inner product TotalValue {i} : {kernel}");
                             kernels[i] = Math.Pow((this._gamma * kernel) + this._coef0, this._degree);
 							Console.WriteLine($"kernels[{i}] = {kernels[i]}");
                         }
@@ -336,7 +351,7 @@ namespace IrisSVNSecured
             private const bool PRINT_EXACT_SCALE = false;
             private const bool PRINT_CIPHER_TEXT = false;
 
-            private const bool USE_BATCH_INNER_PRODUCT = false;
+            private const bool USE_BATCH_INNER_PRODUCT = true;
 
 
             //private static Decryptor _decryptor;
@@ -479,7 +494,6 @@ namespace IrisSVNSecured
 			{
 
 				
-                Console.WriteLine();
 
 				ulong slotCount = _encoder.SlotCount;
 				
@@ -573,7 +587,7 @@ namespace IrisSVNSecured
 
                     //kernels[i] = sums[i];
                     innerProductStopwatch.Stop();
-                    PrintCyprherText(_decryptor, _kernels[i], _encoder, $"inner product result {i}" );
+                    PrintCyprherText(_decryptor, _kernels[i], _encoder, $"inner product TotalValue {i}" );
                     PrintScale(_kernels[i], "0. kernels" + i);
                     if (useRelinearizeInplace)
                     {
@@ -756,11 +770,10 @@ namespace IrisSVNSecured
 				//)
 				//{
 				//	_firstTime = false;
-				//	file.WriteLine($"{result[0]}");
+				//	file.WriteLine($"{TotalValue[0]}");
                 serverDecisionStopWatch.Stop();
 				//}
                 Console.WriteLine($"client Init elapsed {clientStopwatch.ElapsedMilliseconds} ms");
-                
                 Console.WriteLine($"server innerProductStopwatch elapsed {innerProductStopwatch.ElapsedMilliseconds} ms");
                 Console.WriteLine($"server negateStopwatch elapsed {negateStopwatch.ElapsedMilliseconds} ms");
                 Console.WriteLine($"server degreeStopwatch elapsed {degreeStopwatch.ElapsedMilliseconds} ms");
@@ -825,7 +838,7 @@ namespace IrisSVNSecured
 				List<double> result = new List<double>();
 				encoder.Decode(plainResult, result);
 
-				Console.WriteLine($"{name} result = {result[0]}");
+				Console.WriteLine($"{name} TotalValue = {result[0]}");
 				return result;
 			}
 
@@ -833,7 +846,7 @@ namespace IrisSVNSecured
 		}
 
 
-		static void Main(string[] args)
+		static async Task Main(string[] args)
 		{
 			Console.WriteLine("Hello World!");
 
@@ -974,7 +987,10 @@ namespace IrisSVNSecured
             numOfRows = 0;
             features = LoadFeatures(bytes_mashrooms, vectors_mashroom[0].Length, ref numOfRows);
 
-            numOfRows = 5;
+            numOfRows = 200;
+
+			Result[] results = new Result[numOfRows];
+
 
             if (RunSvc)
             {
@@ -1009,38 +1025,68 @@ namespace IrisSVNSecured
                 }
             }
 
-     
+            int processorCount = Environment.ProcessorCount;
+            Console.WriteLine("Number Of Logical Processors: {0}", processorCount);
+
+            SecureSVC[] machines = new SecureSVC[processorCount];
+            Task[] tasks = new Task[processorCount];
+
 
             Console.WriteLine("\n\n SecureSVC Mashroom: ");
-           // int scale = 40;
-            SecureSVC clf_mashhroom =
-                new SecureSVC(2, vectors_mashroom, coefficients_mashroom, intercepts_mashroom, weights_mashroom, "poly", 0.045454545454545456, 0.0, 2, scale);
-            //IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
 
-            //bool useRelinearizeInplace = true;
-            //bool useReScale = true;
+            for (int i = 0; i < processorCount; i++)
+            {
+	            machines[i] = new SecureSVC(2, vectors_mashroom, coefficients_mashroom, intercepts_mashroom, weights_mashroom, "poly", 0.045454545454545456, 0.0, 2, scale);
 
+
+            }
+
+            //Action<int, int> secondAction = SinglePredict;
 
             using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(
                     $@"{OutputDir}SVMBatchPoly_IrisSecureSVC_MASHROOM_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
             )
             {
+
+                // Action< SecureSVC , double[] , int > thirdAction = (secureSvc, feature, i) => SinglePredict(secureSvc, feature, i, TODO);
                 Stopwatch timePredictSum = new Stopwatch();
-                for (int i = 0; i < numOfRows; i++)
+
+                timePredictSum.Start();
+                for (int i = 0; i < numOfRows;)
                 {
-                    Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-                    double finalResult = 0;
-                    timePredictSum.Start();
-                    int estimation = clf_mashhroom.Predict(features[i], useRelinearizeInplace, useReScale, out finalResult);
-                    timePredictSum.Stop();
-                    file.WriteLine($"SecureSVC estimation{i} is : {estimation}  finalResult = {finalResult}");
-                    Console.WriteLine($"SecureSVC estimation{i} is : {estimation}  finalResult = {finalResult}");
-                    Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
+
+	                for (int j = 0 ; j < processorCount && i < numOfRows; j++)
+	                {
+						var secureSvc = machines[i % processorCount];
+						var feature = features[i];
+                        //Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+                        List<object> l = new List<object>();
+                        l.Add(secureSvc);
+                        l.Add(feature);
+                        l.Add(i);
+						l.Add(results);
+		                tasks[j] = new TaskFactory().StartNew(new Action<object>((test) =>
+                        {
+	                        List<object> l2 = (List<object>)test;
+	                        SinglePredict((SecureSVC)l2[0], (double[])l2[1], (int)l2[2], (Result[]) l2[3]);
+                        }), l);
+                        i++;
+	                }
+
+	                await Task.WhenAll(tasks);
+
                 }
 
+                timePredictSum.Stop();
+                for (int i = 0; i < numOfRows; i++)
+                {
+	                var result = results[i];
+	                file.WriteLine($"SecureSVC estimation {i} is : {result.Estimation} , finalResult = {result.TotalValue}");
+
+                }
                 int avgPredict = (int)(timePredictSum.Elapsed.TotalMilliseconds / numOfRows);
-                Console.WriteLine($"Average Predict: {avgPredict} ms");
+                //Console.WriteLine($"Average Predict: {avgPredict} ms");
                 file.WriteLine($"Average Predict: {avgPredict} ms");
                 file.WriteLine($"Total time Predict: {timePredictSum.Elapsed.TotalMilliseconds} ms");
             }
@@ -1051,6 +1097,21 @@ namespace IrisSVNSecured
 
 			Console.ReadLine();
 
+		}
+
+		private static void SinglePredict(  SecureSVC secureSvc, double[] feature, int i, Result[] results)
+		{
+			Stopwatch timePredictSum = new Stopwatch();
+			double finalResult = 0;
+			timePredictSum.Start();
+			Console.WriteLine($"start {i} \n");
+
+            int estimation = secureSvc.Predict(feature, true, true, out finalResult);
+			timePredictSum.Stop();
+
+			results[i] = new Result(finalResult, estimation);
+			Console.WriteLine($"SecureSVC estimation{i} is : {estimation} , finalResult = {finalResult} , Time = {timePredictSum.ElapsedMilliseconds}");
+			
 		}
 
 		private static double[][] LoadFeatures(byte[] bytes,int numberOfFeatuters ,ref int numOfRows)

@@ -97,7 +97,7 @@ namespace IrisSVNSecured
 							{
 								kernel += this._vectors[i][j] * features[j];
 							}
-							Console.WriteLine($"inner product result {i} : {kernel}");
+							Console.WriteLine($"inner product TotalValue {i} : {kernel}");
 							kernels[i] = Math.Pow((this._gamma * kernel) + this._coef0, this._degree);
 							Console.WriteLine($"kernels[{i}] = {kernels[i]}");
 						}
@@ -364,20 +364,27 @@ namespace IrisSVNSecured
 
 				var plaintexts  = new Plaintext();
 				var featuresCiphertexts = new Ciphertext();
-
-
-				//Encode and encrypt features
-				double scale = Math.Pow(2.0, _power);
+				
+				Stopwatch clientStopwatch = new Stopwatch();
+				clientStopwatch.Start();
+                //Encode and encrypt features
+                double scale = Math.Pow(2.0, _power);
 				_encoder.Encode(features, scale, plaintexts);
 				_encryptor.Encrypt(plaintexts, featuresCiphertexts);
 				PrintScale(plaintexts, "featurePlaintext");
 				PrintScale(featuresCiphertexts, "featurefEncrypted");
+				clientStopwatch.Stop();
 
-				// Handle SV
-				var numOfrowsCount    = _vectors.Length;
+
+				Stopwatch serverInitStopwatch = new Stopwatch();
+				serverInitStopwatch.Start();
+                // Handle SV
+                var numOfrowsCount    = _vectors.Length;
 				var numOfcolumnsCount = _vectors[0].Length;
 		   
 				var svPlaintexts = new Plaintext[numOfrowsCount];
+
+
 
                 //Encode SV
                 var sums = new Ciphertext[numOfrowsCount];
@@ -403,14 +410,21 @@ namespace IrisSVNSecured
 				_encoder.Encode(_gamma, scale, gamaPlaintext);
 
 				Ciphertext tempCt = new Ciphertext();
+				serverInitStopwatch.Stop();
 
-
+				Stopwatch innerProductStopwatch = new Stopwatch();
+                Stopwatch negateStopwatch = new Stopwatch();
+                Stopwatch degreeStopwatch = new Stopwatch();
                 // Level 1
                 for (int i = 0; i < numOfrowsCount; i++)
 				{
-					//Console.WriteLine(i);
+                    //Console.WriteLine(i);
 
                     //inner product
+                  
+
+                    innerProductStopwatch.Start();
+
                     _evaluator.MultiplyPlain(featuresCiphertexts, svPlaintexts[i],sums[i]);
                     int numOfRotations = (int)Math.Ceiling(Math.Log2(numOfcolumnsCount));
 
@@ -421,10 +435,10 @@ namespace IrisSVNSecured
                         _evaluator.AddInplace(sums[i], tempCt);
 
                     }
-
+                    innerProductStopwatch.Stop();
                     kernels[i] = sums[i];
 
-                    PrintCyprherText(_decryptor, kernels[i], _encoder, $"inner product result {i}" );
+                    PrintCyprherText(_decryptor, kernels[i], _encoder, $"inner product TotalValue {i}" );
                     PrintScale(kernels[i], "0. kernels" + i);
                     if (useRelinearizeInplace)
                     {
@@ -477,6 +491,11 @@ namespace IrisSVNSecured
                         }
 
                         PrintScale(kernels[i], "4.  kernels" + i);
+
+                       
+
+                        degreeStopwatch.Start();
+
                         var kernel = new Ciphertext(kernels[i]);
                         for (int d = 0; d < (int)_degree-1; d++)
 						{
@@ -501,22 +520,31 @@ namespace IrisSVNSecured
 							PrintScale(kernels[i], d + " rescale  6. kernels" + i);
 						}
 						PrintScale(kernels[i], "7. kernels" + i);
-					}
+
+						degreeStopwatch.Stop();
+                    }
 
 
+					
 
+					negateStopwatch.Start();
 
-					_evaluator.NegateInplace(kernels[i]);
+                    _evaluator.NegateInplace(kernels[i]);
+                    negateStopwatch.Stop();
 
-
-					PrintScale(kernels[i], "8. kernel"+i); 
+                    PrintScale(kernels[i], "8. kernel"+i); 
 
 					PrintCyprherText(_decryptor, kernels[i], _encoder, "kernel"+i);
 
 				}
 
-				// Encode coefficients : ParmsId! , scale!
-				double scale2 = Math.Pow(2.0, _power);
+
+                Stopwatch serverDecisionStopWatch = new Stopwatch();
+
+                serverDecisionStopWatch.Start();
+
+                // Encode coefficients : ParmsId! , scale!
+                double scale2 = Math.Pow(2.0, _power);
 				if (useReScale)
 				{
 					scale2 = kernels[0].Scale;
@@ -596,17 +624,26 @@ namespace IrisSVNSecured
 
 				PrintScale(decisionTotal, "decisionTotal");  //Level 3
 				List<double> result = PrintCyprherText(_decryptor, decisionTotal, _encoder, "finalTotal",true);
-				
-				//using (System.IO.StreamWriter file =
-				//	new System.IO.StreamWriter(
-				//		$@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\GeneralPolyBatch_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
-				//)
-				//{
-				//	_firstTime = false;
-				//	file.WriteLine($"{result[0]}");
-				//}
 
-				finalResult = result[0];
+                //using (System.IO.StreamWriter file =
+                //	new System.IO.StreamWriter(
+                //		$@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\GeneralPolyBatch_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
+                //)
+                //{
+                //	_firstTime = false;
+                //	file.WriteLine($"{TotalValue[0]}");
+                //}
+                serverDecisionStopWatch.Stop();
+
+                Console.WriteLine($"client Init elapsed {clientStopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine($"server Init elapsed {serverInitStopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine($"server innerProductStopwatch elapsed {innerProductStopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine($"server negateStopwatch elapsed {negateStopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine($"server degreeStopwatch elapsed {degreeStopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine($"server Decision elapsed {serverDecisionStopWatch.ElapsedMilliseconds} ms");
+
+
+                finalResult = result[0];
 
                 if (result[0] > 0)
 				{
@@ -650,7 +687,7 @@ namespace IrisSVNSecured
 				List<double> result = new List<double>();
 				encoder.Decode(plainResult, result);
 
-				Console.WriteLine($"{name} result = {result[0]}");
+				Console.WriteLine($"{name} TotalValue = {result[0]}");
 				return result;
 			}
 

@@ -39,9 +39,10 @@ namespace IrisSVNSecured
 	}
     class SVMBatchPolyMashroom
     {
-		private const bool   RunSvc      = true;
+		private const bool   RunSvc      = false;
 		private const bool   RunIris  = false;
 		private const bool   RunMashroom = true;
+
         private const string OutputDir    = @"C:\Output\";
 
         public class SVC
@@ -316,12 +317,28 @@ namespace IrisSVNSecured
 			private readonly Evaluator		_evaluator;
 			private readonly Decryptor		_decryptor;
 			private readonly CKKSEncoder	_encoder;
+			private readonly int			_numOfrowsCount;
+			private readonly int			 _numOfcolumnsCount;
+			private readonly Plaintext[]	_svPlaintexts;
+			private readonly Ciphertext[]	_sums;
+			private readonly Ciphertext[]	_kernels;
+			private readonly Ciphertext[]	_decisionsArr;
+			private readonly Plaintext[]	_coefArr;
+			private readonly Plaintext	_gamaPlaintext;
+			private Plaintext[,] _svPlaintextsArr;
+			private Ciphertext[] _innerProdSums;
+			private double _scale;
+			private const double ZERO = 1.0E-9;
 
-			//private static bool _firstTime = true;
+            //private static bool _firstTime = true;
 
-			private const bool PRINT_SCALE		 = false;
+            private const bool PRINT_SCALE		 = false;
             private const bool PRINT_EXACT_SCALE = false;
-            private const bool PRINT_CIPHER_TEXT = true;
+            private const bool PRINT_CIPHER_TEXT = false;
+
+            private const bool USE_BATCH_INNER_PRODUCT = false;
+
+
             //private static Decryptor _decryptor;
 
             public SecureSVC(int nRows, double[][] vectors, double[][] coefficients, double[] intercepts,
@@ -329,9 +346,9 @@ namespace IrisSVNSecured
 			{
 
 
-				//this._nRows			= nRows;
+                //this._nRows			= nRows;
 
-				this._vectors		= vectors;
+                this._vectors		= vectors;
 				this._coefficients	= coefficients;
 				this._intercepts		= intercepts;
 				this._weights		= weights;
@@ -364,23 +381,105 @@ namespace IrisSVNSecured
 				parms.PolyModulusDegree = polyModulusDegree;
                 _context = new SEALContext(parms);
 
+
+
 				KeyGenerator keygen = new KeyGenerator(_context);
 				_publicKey = keygen.PublicKey;
 				_secretKey = keygen.SecretKey;
 				_relinKeys = keygen.RelinKeys();
-				_galoisKeys = keygen.GaloisKeys();
+				if (USE_BATCH_INNER_PRODUCT)
+				{
+					_galoisKeys = keygen.GaloisKeys();
+				}
 
 				_encryptor = new Encryptor(_context, _publicKey);
 				_evaluator = new Evaluator(_context);
 				_decryptor = new Decryptor(_context, _secretKey);
 				_encoder = new CKKSEncoder(_context);
-			}
+
+
+
+				Stopwatch serverInitStopwatch = new Stopwatch();
+				serverInitStopwatch.Start();
+
+
+
+                _numOfrowsCount = _vectors.Length;
+				_numOfcolumnsCount = _vectors[0].Length;
+				_scale = Math.Pow(2.0, _power);
+                ////////////////////////////////////////////////////////////////////////
+                ///
+                ///	vars for batch rotations
+                /// 
+                _svPlaintexts = new Plaintext[_numOfrowsCount];
+			
+                //Encode SV
+                _sums = new Ciphertext[_numOfrowsCount];
+                if (USE_BATCH_INNER_PRODUCT)
+                {
+	                for (int i = 0; i < _numOfrowsCount; i++)
+	                {
+		                _svPlaintexts[i] = new Plaintext();
+		                _encoder.Encode(_vectors[i], _scale, _svPlaintexts[i]);
+		                PrintScale(_svPlaintexts[i], "batch supportVectorsPlaintext" + i);
+		                _sums[i] = new Ciphertext();
+	                }
+                }
+
+                /////////////////////////////////////////////////////////////////////////
+				//
+                //   vars for simple inner product
+				//
+                // Handle SV
+
+                _svPlaintextsArr = new Plaintext[_numOfrowsCount, _numOfcolumnsCount];
+
+                //Encode SV
+                for (int i = 0; i < _numOfrowsCount; i++)
+                {
+	                for (int j = 0; j < _numOfcolumnsCount; j++)
+	                {
+		                _svPlaintextsArr[i, j] = new Plaintext();
+		                
+		                _encoder.Encode(_vectors[i][j] !=0 ? _vectors[i][j] : ZERO, _scale, _svPlaintextsArr[i, j]);
+		                PrintScale(_svPlaintextsArr[i, j], $"supportVectorsPlaintext[{i}][{j}]");
+	                }
+                }
+
+                // Prepare sum of inner product
+                _innerProdSums = new Ciphertext[_numOfcolumnsCount];
+                for (int i = 0; i < _numOfcolumnsCount; i++)
+                {
+	                _innerProdSums[i] = new Ciphertext();
+                }
+				//////////////////////////////////////////////////////////////
+
+
+
+
+                _kernels = new Ciphertext[_numOfrowsCount];
+				_decisionsArr = new Ciphertext[_numOfrowsCount];
+				_coefArr = new Plaintext[_numOfrowsCount];
+
+				for (int i = 0; i < _numOfrowsCount; i++)
+				{
+					_kernels[i] = new Ciphertext();
+					_decisionsArr[i] = new Ciphertext();
+					_coefArr[i] = new Plaintext();
+				}
+				_gamaPlaintext = new Plaintext();
+				_encoder.Encode(_gamma!=0?_gamma: ZERO , _scale, _gamaPlaintext);
+
+				
+				serverInitStopwatch.Stop();
+				Console.WriteLine($"server Init elapsed {serverInitStopwatch.ElapsedMilliseconds} ms");
+            }
 
 			public int Predict(double[] features, bool useRelinearizeInplace,bool useReScale,out double finalResult)
 			{
 
-			   
-				Console.WriteLine();
+				
+                Console.WriteLine();
 
 				ulong slotCount = _encoder.SlotCount;
 				
@@ -388,84 +487,106 @@ namespace IrisSVNSecured
 
 				var featuresLength = features.Length;
 
+				//double scale = Math.Pow(2.0, _power);
 
 
-				var plaintexts  = new Plaintext();
+
+
+
+                var plaintexts  = new Plaintext();
 				var featuresCiphertexts = new Ciphertext();
 
-
+				Stopwatch clientStopwatch = new Stopwatch();
+				clientStopwatch.Start();
 				//Encode and encrypt features
-				double scale = Math.Pow(2.0, _power);
-				_encoder.Encode(features, scale, plaintexts);
+				///////////////////////////////////////////////////////////////////////////////////////////////////
+				_encoder.Encode(features, _scale, plaintexts);
 				_encryptor.Encrypt(plaintexts, featuresCiphertexts);
 				PrintScale(plaintexts, "featurePlaintext");
 				PrintScale(featuresCiphertexts, "featurefEncrypted");
+                ///////////////////////////////////////////////////////////////////////////////////////////////////
+                var plaintexts_arr = new Plaintext[featuresLength];
+                var featuresCiphertexts_arr = new Ciphertext[featuresLength];
+                //Encode and encrypt features
+                for (int i = 0; i < featuresLength; i++)
+                {
+	                plaintexts_arr[i] = new Plaintext();
+
+	                _encoder.Encode(features[i], _scale, plaintexts_arr[i]);
+
+	                PrintScale(plaintexts_arr[i], "featurePlaintext" + i);
+	                featuresCiphertexts_arr[i] = new Ciphertext();
+
+	                _encryptor.Encrypt(plaintexts_arr[i], featuresCiphertexts_arr[i]);
+	                PrintScale(featuresCiphertexts_arr[i], "featurefEncrypted" + i);
+                }
+                //////////////////////////////////////////////////////////////////////////////////////////////////
+                clientStopwatch.Stop();
 
 				// Handle SV
-				var numOfrowsCount    = _vectors.Length;
-				var numOfcolumnsCount = _vectors[0].Length;
-		   
-				var svPlaintexts = new Plaintext[numOfrowsCount];
 
-                //Encode SV
-                var sums = new Ciphertext[numOfrowsCount];
-                for (int i = 0; i < numOfrowsCount; i++)
-				{
-						svPlaintexts[i] = new Plaintext();
-						_encoder.Encode(_vectors[i], scale, svPlaintexts[i]);
-						PrintScale(svPlaintexts[i], "supportVectorsPlaintext"+i);
-						sums[i] = new Ciphertext();
-                }
 
-				var kernels      = new Ciphertext[numOfrowsCount];
-				var decisionsArr = new Ciphertext[numOfrowsCount];
-				var coefArr      = new Plaintext [numOfrowsCount];
+				Stopwatch innerProductStopwatch = new Stopwatch();
+                Stopwatch negateStopwatch = new Stopwatch();
+                Stopwatch degreeStopwatch = new Stopwatch();
 
-				for (int i = 0; i < numOfrowsCount; i++)
-				{
-					kernels[i]       = new Ciphertext();
-					decisionsArr[i]  = new Ciphertext();
-					coefArr[i]       = new Plaintext();
-				}
-				Plaintext  gamaPlaintext= new Plaintext();
-				_encoder.Encode(_gamma, scale, gamaPlaintext);
+                Ciphertext tempCt = new Ciphertext();
 
-				Ciphertext tempCt = new Ciphertext();
+
 
 
                 // Level 1
-                for (int i = 0; i < numOfrowsCount; i++)
+                for (int i = 0; i < _numOfrowsCount; i++)
 				{
 					//Console.WriteLine(i);
 
                     //inner product
-                    _evaluator.MultiplyPlain(featuresCiphertexts, svPlaintexts[i],sums[i]);
-                    int numOfRotations = (int)Math.Ceiling(Math.Log2(numOfcolumnsCount));
-
-                    for (int k = 1,m=1; m <= numOfRotations/*(int)encoder.SlotCount/2*/; k <<= 1,m++)
+                    innerProductStopwatch.Start();
+                    if (USE_BATCH_INNER_PRODUCT)
                     {
+	                    _kernels[i] = InnerProduct(featuresCiphertexts, _svPlaintexts, i, _sums, _numOfcolumnsCount,
+		                    tempCt);
+                    }
+                    else
+                    {
+	                    //inner product
+	                    for (int j = 0; j < _numOfcolumnsCount; j++)
+	                    {
+		                    _evaluator.MultiplyPlain(featuresCiphertexts_arr[j], _svPlaintextsArr[i, j], _innerProdSums[j]);
 
-                        _evaluator.RotateVector(sums[i], k, _galoisKeys, tempCt);
-                        _evaluator.AddInplace(sums[i], tempCt);
+		                    if (useRelinearizeInplace)
+		                    {
+			                    _evaluator.RelinearizeInplace(_innerProdSums[j], _relinKeys);
+		                    }
 
+		                    if (useReScale)
+		                    {
+			                    _evaluator.RescaleToNextInplace(_innerProdSums[j]);
+		                    }
+
+		                    PrintScale(_innerProdSums[j], "tSum" + j);
+
+	                    }
+	                    _evaluator.AddMany(_innerProdSums, _kernels[i]);
                     }
 
-                    kernels[i] = sums[i];
 
-                    PrintCyprherText(_decryptor, kernels[i], _encoder, $"inner product result {i}" );
-                    PrintScale(kernels[i], "0. kernels" + i);
+                    //kernels[i] = sums[i];
+                    innerProductStopwatch.Stop();
+                    PrintCyprherText(_decryptor, _kernels[i], _encoder, $"inner product result {i}" );
+                    PrintScale(_kernels[i], "0. kernels" + i);
                     if (useRelinearizeInplace)
                     {
-                        _evaluator.RelinearizeInplace(kernels[i], _relinKeys);
+                        _evaluator.RelinearizeInplace(_kernels[i], _relinKeys);
                     }
 
                     if (useReScale)
                     {
-                        _evaluator.RescaleToNextInplace(kernels[i]);
+                        _evaluator.RescaleToNextInplace(_kernels[i]);
                     }
 
-                    PrintScale(kernels[i], "1. kernels" + i);
-                    kernels[i].Scale = scale;
+                    PrintScale(_kernels[i], "1. kernels" + i);
+                    _kernels[i].Scale = _scale;
 
 
                     if (_kernel == Kernel.Poly)
@@ -473,113 +594,119 @@ namespace IrisSVNSecured
 
                         if (useReScale)
                         {
-                            ParmsId lastParmsId = kernels[i].ParmsId;
-                            _evaluator.ModSwitchToInplace(gamaPlaintext, lastParmsId);
+                            ParmsId lastParmsId = _kernels[i].ParmsId;
+                            _evaluator.ModSwitchToInplace(_gamaPlaintext, lastParmsId);
                         }
-                        _evaluator.MultiplyPlainInplace(kernels[i], gamaPlaintext);
-                        PrintScale(kernels[i], "2. kernels" + i);
+                        _evaluator.MultiplyPlainInplace(_kernels[i], _gamaPlaintext);
+                        PrintScale(_kernels[i], "2. kernels" + i);
                         if (useRelinearizeInplace)
                         {
-                            _evaluator.RelinearizeInplace(kernels[i], _relinKeys);
+                            _evaluator.RelinearizeInplace(_kernels[i], _relinKeys);
                         }
 
                         if (useReScale)
                         {
-                            _evaluator.RescaleToNextInplace(kernels[i]);
+                            _evaluator.RescaleToNextInplace(_kernels[i]);
                         }
-                        PrintScale(kernels[i], "3.  kernels" + i);
+                        PrintScale(_kernels[i], "3.  kernels" + i);
 
                         if (Math.Abs(_coef0) > 0)
                         {
                             Plaintext coef0Plaintext = new Plaintext();
-                            _encoder.Encode(_coef0, kernels[i].Scale, coef0Plaintext);
+                            _encoder.Encode(_coef0, _kernels[i].Scale, coef0Plaintext);
                             if (useReScale)
                             {
-                                ParmsId lastParmsId = kernels[i].ParmsId;
+                                ParmsId lastParmsId = _kernels[i].ParmsId;
                                 _evaluator.ModSwitchToInplace(coef0Plaintext, lastParmsId);
                             }
 
                             //kernels[i].Scale = coef0Plaintext.Scale;
 
-                            _evaluator.AddPlainInplace(kernels[i], coef0Plaintext);
+                            _evaluator.AddPlainInplace(_kernels[i], coef0Plaintext);
                         }
 
-                        PrintScale(kernels[i], "4.  kernels" + i);
-                        var kernel = new Ciphertext(kernels[i]);
+                        PrintScale(_kernels[i], "4.  kernels" + i);
+                        degreeStopwatch.Start();
+                        var kernel = new Ciphertext(_kernels[i]);
                         for (int d = 0; d < (int)_degree - 1; d++)
                         {
 
-                            kernel.Scale = kernels[i].Scale;
+                            kernel.Scale = _kernels[i].Scale;
                             if (useReScale)
                             {
-                                ParmsId lastParmsId = kernels[i].ParmsId;
+                                ParmsId lastParmsId = _kernels[i].ParmsId;
                                 _evaluator.ModSwitchToInplace(kernel, lastParmsId);
                             }
-                            _evaluator.MultiplyInplace(kernels[i], kernel);
-                            PrintScale(kernels[i], d + "  5. kernels" + i);
+                            _evaluator.MultiplyInplace(_kernels[i], kernel);
+                            PrintScale(_kernels[i], d + "  5. kernels" + i);
                             if (useRelinearizeInplace)
                             {
-                                _evaluator.RelinearizeInplace(kernels[i], _relinKeys);
+                                _evaluator.RelinearizeInplace(_kernels[i], _relinKeys);
                             }
 
                             if (useReScale)
                             {
-                                _evaluator.RescaleToNextInplace(kernels[i]);
+                                _evaluator.RescaleToNextInplace(_kernels[i]);
                             }
-                            PrintScale(kernels[i], d + " rescale  6. kernels" + i);
+                            PrintScale(_kernels[i], d + " rescale  6. kernels" + i);
                         }
-                        PrintScale(kernels[i], "7. kernels" + i);
+                        PrintScale(_kernels[i], "7. kernels" + i);
+						degreeStopwatch.Stop();
 					}
 
 
 
+					negateStopwatch.Start();
 
-					_evaluator.NegateInplace(kernels[i]);
+					_evaluator.NegateInplace(_kernels[i]);
+                    negateStopwatch.Stop();
 
-					PrintScale(kernels[i], "8. kernel"+i); 
+					PrintScale(_kernels[i], "8. kernel"+i); 
 
-					PrintCyprherText(_decryptor, kernels[i], _encoder, "kernel"+i);
+					PrintCyprherText(_decryptor, _kernels[i], _encoder, "kernel"+i);
 
 				}
+                Stopwatch serverDecisionStopWatch = new Stopwatch();
+                serverDecisionStopWatch.Start();
                 // Encode coefficients : ParmsId! , scale!
                 double scale2 = Math.Pow(2.0, _power);
 				if (useReScale)
 				{
-					scale2 = kernels[0].Scale;
+					scale2 = _kernels[0].Scale;
 				}
 
-				for (int i = 0; i < numOfrowsCount; i++)
+				for (int i = 0; i < _numOfrowsCount; i++)
 				{
-					_encoder.Encode(_coefficients[0][i], scale2, coefArr[i]);
-					PrintScale(coefArr[i], "coefPlainText"+i);
+					_encoder.Encode(_coefficients[0][i], scale2, _coefArr[i]);
+					PrintScale(_coefArr[i], "coefPlainText"+i);
 				}
 
 
 
 				if (useReScale)
 				{
-					for (int i = 0; i < numOfrowsCount; i++)
+					for (int i = 0; i < _numOfrowsCount; i++)
 					{
-						ParmsId lastParmsId = kernels[i].ParmsId;
-						_evaluator.ModSwitchToInplace(coefArr[i], lastParmsId);
+						ParmsId lastParmsId = _kernels[i].ParmsId;
+						_evaluator.ModSwitchToInplace(_coefArr[i], lastParmsId);
 					}
 				}
                 // Level 2
                 // Calculate decisionArr
-                for (int i = 0; i < numOfrowsCount; i++)
+                for (int i = 0; i < _numOfrowsCount; i++)
                 {
-                    _evaluator.MultiplyPlain(kernels[i], coefArr[i], decisionsArr[i]);
+                    _evaluator.MultiplyPlain(_kernels[i], _coefArr[i], _decisionsArr[i]);
                     if (useRelinearizeInplace)
                     {
-                        _evaluator.RelinearizeInplace(decisionsArr[i], _relinKeys);
+                        _evaluator.RelinearizeInplace(_decisionsArr[i], _relinKeys);
                     }
 
                     if (useReScale)
                     {
-                        _evaluator.RescaleToNextInplace(decisionsArr[i]);
+                        _evaluator.RescaleToNextInplace(_decisionsArr[i]);
                     }
-                    PrintScale(decisionsArr[i], "decision" + i);
-                    PrintCyprherText(_decryptor, decisionsArr[i], _encoder, "decision" + i);
+                    PrintScale(_decisionsArr[i], "decision" + i);
+                    PrintCyprherText(_decryptor, _decisionsArr[i], _encoder, "decision" + i);
                 }
 
 
@@ -587,7 +714,7 @@ namespace IrisSVNSecured
                 // Calculate decisionTotal
                 Ciphertext decisionTotal = new Ciphertext();
 				//=================================================================
-				_evaluator.AddMany(decisionsArr, decisionTotal);
+				_evaluator.AddMany(_decisionsArr, decisionTotal);
 				//=================================================================
 			  
 				PrintScale(decisionTotal, "decisionTotal"); 
@@ -630,7 +757,14 @@ namespace IrisSVNSecured
 				//{
 				//	_firstTime = false;
 				//	file.WriteLine($"{result[0]}");
+                serverDecisionStopWatch.Stop();
 				//}
+                Console.WriteLine($"client Init elapsed {clientStopwatch.ElapsedMilliseconds} ms");
+                
+                Console.WriteLine($"server innerProductStopwatch elapsed {innerProductStopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine($"server negateStopwatch elapsed {negateStopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine($"server degreeStopwatch elapsed {degreeStopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine($"server Decision elapsed {serverDecisionStopWatch.ElapsedMilliseconds} ms");
 
 				finalResult = result[0];
 
@@ -641,6 +775,21 @@ namespace IrisSVNSecured
 
 				return 1;
 
+			}
+
+			private Ciphertext InnerProduct(Ciphertext featuresCiphertexts, Plaintext[] svPlaintexts, int i, Ciphertext[] sums,int numOfcolumnsCount, Ciphertext tempCt)
+			{
+				_evaluator.MultiplyPlain(featuresCiphertexts, svPlaintexts[i], sums[i]);
+				int numOfRotations = (int) Math.Ceiling(Math.Log2(numOfcolumnsCount));
+
+				for (int k = 1, m = 1; m <= numOfRotations /*(int)encoder.SlotCount/2*/; k <<= 1, m++)
+				{
+					_evaluator.RotateVector(sums[i], k, _galoisKeys, tempCt);
+					_evaluator.AddInplace(sums[i], tempCt);
+				}
+
+				var sum = sums[i];
+				return sum;
 			}
 
 			private static void PrintScale(Ciphertext ciphertext, String name)
@@ -825,7 +974,7 @@ namespace IrisSVNSecured
             numOfRows = 0;
             features = LoadFeatures(bytes_mashrooms, vectors_mashroom[0].Length, ref numOfRows);
 
-            numOfRows = 1;
+            numOfRows = 5;
 
             if (RunSvc)
             {

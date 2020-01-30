@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace IrisSVNSecured
+namespace SVM
 {
 
 
@@ -881,7 +881,7 @@ namespace IrisSVNSecured
                 else
                 {
 
-                    var bytes = Properties.Resources.iris;
+                    var bytes = IrisSVNSecured.Properties.Resources.iris;
                     numOfRows = 0;
                     features = LoadFeatures(bytes,4, ref numOfRows);
                 }
@@ -983,7 +983,7 @@ namespace IrisSVNSecured
 
 
 
-            var bytes_mashrooms = Properties.Resources.mashrooms;
+            var bytes_mashrooms = IrisSVNSecured.Properties.Resources.mashrooms;
             numOfRows = 0;
             features = LoadFeatures(bytes_mashrooms, vectors_mashroom[0].Length, ref numOfRows);
 

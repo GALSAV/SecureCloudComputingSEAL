@@ -22,3 +22,5 @@ Conclusions :
 	5.ParmsId
 		5.1  Encrypted multiplication addition and subtraction require that the scales of the inputs are
             the same, and also that the encryption parameters (ParmsId) match
+	6. WARNINGS : multipky by ZERO!!!
+			

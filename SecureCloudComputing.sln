@@ -9,16 +9,29 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BFV_TEST", "BFV_TEST\BFV_TE
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "summary", "summary", "{A1A575A2-E330-4CD9-A559-4BC97C652192}"
 	ProjectSection(SolutionItems) = preProject
-		..\..\..\..\Secure Cloud Computing\summary.txt = ..\..\..\..\Secure Cloud Computing\summary.txt
+		..\..\..\Secure Cloud Computing\summary.txt = ..\..\..\Secure Cloud Computing\summary.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7C5D7CB8-824D-41C9-A2C2-54EE6D4D6882}"
 	ProjectSection(SolutionItems) = preProject
-		..\..\..\..\Secure Cloud Computing\summary.txt = ..\..\..\..\Secure Cloud Computing\summary.txt
+		..\..\..\Secure Cloud Computing\summary.txt = ..\..\..\Secure Cloud Computing\summary.txt
 		TextFile1.txt = TextFile1.txt
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IrisSVNSecured", "IrisSVNSecured\IrisSVNSecured.csproj", "{BAA69801-01B6-4499-A2DD-FEAACE8A6A3F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IrisSVNSecured", "IrisSVNSecured\IrisSVNSecured.csproj", "{BAA69801-01B6-4499-A2DD-FEAACE8A6A3F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlainSVC", "PlainSVC\PlainSVC.csproj", "{AC419C58-BE90-4CE5-A7B7-AE6530500105}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "APP", "APP\APP.csproj", "{0C67EF25-2F89-4832-9AD4-E9E1E788C44A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureSVC", "SecureSVC\SecureSVC.csproj", "{C0BD6D7B-AC1C-4D4D-9741-0BEF5929B1AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IrisPlain", "IrisPlain\IrisPlain.csproj", "{C8F7BA6C-47AD-4AB5-B435-737741F48A20}"
+	ProjectSection(ProjectDependencies) = postProject
+		{AC419C58-BE90-4CE5-A7B7-AE6530500105} = {AC419C58-BE90-4CE5-A7B7-AE6530500105}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IrisSecured", "IrisSecured\IrisSecured.csproj", "{72177D4B-1688-4BCA-A6CF-6ED5E9EF2A47}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,6 +51,26 @@ Global
 		{BAA69801-01B6-4499-A2DD-FEAACE8A6A3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BAA69801-01B6-4499-A2DD-FEAACE8A6A3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BAA69801-01B6-4499-A2DD-FEAACE8A6A3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC419C58-BE90-4CE5-A7B7-AE6530500105}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC419C58-BE90-4CE5-A7B7-AE6530500105}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC419C58-BE90-4CE5-A7B7-AE6530500105}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC419C58-BE90-4CE5-A7B7-AE6530500105}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C67EF25-2F89-4832-9AD4-E9E1E788C44A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C67EF25-2F89-4832-9AD4-E9E1E788C44A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C67EF25-2F89-4832-9AD4-E9E1E788C44A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C67EF25-2F89-4832-9AD4-E9E1E788C44A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C0BD6D7B-AC1C-4D4D-9741-0BEF5929B1AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C0BD6D7B-AC1C-4D4D-9741-0BEF5929B1AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C0BD6D7B-AC1C-4D4D-9741-0BEF5929B1AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C0BD6D7B-AC1C-4D4D-9741-0BEF5929B1AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8F7BA6C-47AD-4AB5-B435-737741F48A20}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8F7BA6C-47AD-4AB5-B435-737741F48A20}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8F7BA6C-47AD-4AB5-B435-737741F48A20}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8F7BA6C-47AD-4AB5-B435-737741F48A20}.Release|Any CPU.Build.0 = Release|Any CPU
+		{72177D4B-1688-4BCA-A6CF-6ED5E9EF2A47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72177D4B-1688-4BCA-A6CF-6ED5E9EF2A47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72177D4B-1688-4BCA-A6CF-6ED5E9EF2A47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72177D4B-1688-4BCA-A6CF-6ED5E9EF2A47}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

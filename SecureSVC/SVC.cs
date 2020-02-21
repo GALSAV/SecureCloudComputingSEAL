@@ -56,7 +56,7 @@ namespace SecureSVC
 
         //private static Decryptor _decryptor;
 
-        public SVC(int nRows, double[][] vectors, double[][] coefficients, double[] intercepts,/*int[] weights,*/ String kernel, double gamma, double coef0, ulong degree, int power, PublicKey publicKey, SecretKey secretKey, RelinKeys relinKeys, GaloisKeys galoisKeys,int batchSize,int featureSize)
+        public SVC(double[][] vectors, double[][] coefficients, double[] intercepts,/*int[] weights,*/ String kernel, double gamma, double coef0, ulong degree, int power, PublicKey publicKey, SecretKey secretKey, RelinKeys relinKeys, GaloisKeys galoisKeys,int batchSize,int featureSize)
         {                                                                                                                                                                                  
             //this._nRows			= nRows;
 
@@ -202,7 +202,7 @@ namespace SecureSVC
             Console.WriteLine($"server Init elapsed {serverInitStopwatch.ElapsedMilliseconds} ms");
         }
 
-        public List<double> Predict(Ciphertext featuresCiphertexts, bool useRelinearizeInplace, bool useReScale)
+        public Ciphertext  Predict(Ciphertext featuresCiphertexts, bool useRelinearizeInplace, bool useReScale)
         {
 
 
@@ -451,7 +451,7 @@ namespace SecureSVC
             Console.WriteLine($"server negateStopwatch elapsed {negateStopwatch.ElapsedMilliseconds} ms");
             Console.WriteLine($"server degreeStopwatch elapsed {degreeStopwatch.ElapsedMilliseconds} ms");
             Console.WriteLine($"server Decision elapsed {serverDecisionStopWatch.ElapsedMilliseconds} ms");
-            return result;
+            return decisionTotal;
             //finalResult = result[0];
 
             //            if (result[0] > 0)

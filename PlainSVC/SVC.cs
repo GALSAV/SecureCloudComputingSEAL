@@ -74,12 +74,13 @@ namespace PlainSVC
                         for (int j = 0; j < this._vectors[i].Length; j++)
                         {
                             kernel += this._vectors[i][j] * features[j];
-                           PrintConsole($"kernel += this.vectors[{i}][{j}] * features[{j}]");
+                           
                         }
+                        //PrintConsole($"kernel += this.vectors[{i}][{j}] * features[{j}]");
 
                         kernels[i] = kernel;
-                       PrintConsole($"kernels[{i}] = {kernel}");
-                       PrintConsole("-----------------------------------------------------");
+                        PrintConsole($"inner product TotalValue {i} : {kernel}");
+                        PrintConsole("-----------------------------------------------------");
                     }
 
                     break;

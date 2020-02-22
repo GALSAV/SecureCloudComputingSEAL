@@ -3,6 +3,7 @@ using Microsoft.VisualBasic.FileIO;
 using SecureSVC;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 namespace IrisSecured
@@ -65,7 +66,8 @@ namespace IrisSecured
                     features[i] = rows[i]; //new double[numOfColums];
                 }
             }
-
+            Stopwatch clientStopwatch = new Stopwatch();
+            clientStopwatch.Start();
 
             double[][] vectors = new double[3][];
 
@@ -84,6 +86,8 @@ namespace IrisSecured
 
             ulong polyModulusDegree = 16384;
             int power = 40;
+
+            double scale = Math.Pow(2.0, power);
 
             if (power >= 20 && power < 40)
             {
@@ -117,31 +121,54 @@ namespace IrisSecured
            var  _decryptor = new Decryptor(_context, secretKey);
            var  _encoder = new CKKSEncoder(_context);
 
+           clientStopwatch.Stop();
+
+           Stopwatch innerProductStopwatch = new Stopwatch();
+           Stopwatch negateStopwatch = new Stopwatch();
+           Stopwatch degreeStopwatch = new Stopwatch();
+           Stopwatch serverDecisionStopWatch = new Stopwatch();
             SVC clf = new SVC(vectors, coefficients, intercepts, "Linear", 0.25, 0.0, 3,40,publicKey,secretKey,relinKeys,galoisKeys,1,4);
             using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(
                    $@"{OutputDir}IrisSecured_{DateTime.Now.Day}_{DateTime.Now.ToShortTimeString().ToString().Replace(":", "_")}.txt")
             )
             {
+	            Stopwatch totalTime = new Stopwatch();
+	            totalTime.Start();
                 for (int i = 0; i < numOfRows; i++)
                 {
                     double finalResult = -10000;
                     var plaintexts = new Plaintext();
                     var featuresCiphertexts = new Ciphertext();
-                    _encoder.Encode(features[i], power, plaintexts);
+                    _encoder.Encode(features[i], scale, plaintexts);
                     _encryptor.Encrypt(plaintexts, featuresCiphertexts);
-                    var cyphetResult= clf.Predict(featuresCiphertexts, true,true);
+
+   
+                    var cyphetResult= clf.Predict(featuresCiphertexts, true,true,innerProductStopwatch,degreeStopwatch,negateStopwatch,serverDecisionStopWatch);
                     Plaintext plainResult = new Plaintext();
                     _decryptor.Decrypt(cyphetResult, plainResult);
                     List<double> result = new List<double>();
                     _encoder.Decode(plainResult, result);
                     finalResult = result[0];
-                    int estimation = finalResult > 0 ? 1 : 0;
+                    int estimation = finalResult > 0 ? 0 : 1;
                     Console.WriteLine($"\n ************************************************");
                     Console.WriteLine($"SVC estimation{i} is : {estimation} , result : {finalResult}");
                     file.WriteLine($"{i} , {estimation} , {finalResult} ");
                     Console.WriteLine($"************************************************ \n");
                 }
+                totalTime.Stop();
+                file.WriteLine($" Client time :  {clientStopwatch.ElapsedMilliseconds} ms  ");
+                file.WriteLine($" Total time for {numOfRows} samples :  {totalTime.ElapsedMilliseconds} ms  ");
+                file.WriteLine($" Avg time  :  {totalTime.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+                file.WriteLine($" Inner Product time for  {numOfRows} samples :  {innerProductStopwatch.ElapsedMilliseconds} ms  ");
+                file.WriteLine($" Inner Product Avg time  :  {innerProductStopwatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+                file.WriteLine($" Degree time for  {numOfRows} samples :  {degreeStopwatch.ElapsedMilliseconds} ms  ");
+                file.WriteLine($" Degree Avg time  :  {degreeStopwatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+                file.WriteLine($" Negate time for  {numOfRows} samples :  {negateStopwatch.ElapsedMilliseconds} ms  ");
+                file.WriteLine($" Negate Avg time  :  {negateStopwatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+                file.WriteLine($" Decision time for  {numOfRows} samples :  {serverDecisionStopWatch.ElapsedMilliseconds} ms  ");
+                file.WriteLine($" Decision Avg time  :  {serverDecisionStopWatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+
             }
         }
     }

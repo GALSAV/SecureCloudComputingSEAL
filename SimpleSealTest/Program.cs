@@ -59,7 +59,7 @@ namespace SimpleSealTest
             encryptor.Encrypt(inputsPlaintext,c);
 
 
-            evaluator.MultiplyPlainInplace(c,weightsPlaintext);
+            //evaluator.MultiplyPlainInplace(c,weightsPlaintext);
 
             Plaintext outputsPlaintext = new Plaintext();
             decryptor.Decrypt(c, outputsPlaintext);
@@ -68,7 +68,7 @@ namespace SimpleSealTest
             List<double> result = new List<double>();
             encoder.Decode(outputsPlaintext, result);
 
-            Utilities.PrintVector(result);
+            Utilities.PrintVector(result,20);
 
 
 

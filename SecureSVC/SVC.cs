@@ -202,43 +202,19 @@ namespace SecureSVC
             Console.WriteLine($"server Init elapsed {serverInitStopwatch.ElapsedMilliseconds} ms");
         }
 
-        public Ciphertext  Predict(Ciphertext featuresCiphertexts, bool useRelinearizeInplace, bool useReScale)
+        public Ciphertext  Predict(    Ciphertext featuresCiphertexts, bool useRelinearizeInplace, bool useReScale,
+	        Stopwatch innerProductStopwatch, Stopwatch degreeStopwatch, Stopwatch negateStopwatch, Stopwatch serverDecisionStopWatch)
         {
 
-
-
-            //ulong slotCount = _encoder.SlotCount;
-
-            //Console.WriteLine($"Number of slots: {slotCount}");
-
-            //var featuresLength = features.Length;
-
-            //double scale = Math.Pow(2.0, _power);
-
-
-
-
-
-            //var plaintexts = new Plaintext();
-            //var featuresCiphertexts = new Ciphertext();
-
-            Stopwatch clientStopwatch = new Stopwatch();
-            clientStopwatch.Start();
-            //Encode and encrypt features
-            ///////////////////////////////////////////////////////////////////////////////////////////////////
-            //_encoder.Encode(features, _scale, plaintexts);
-            ////_encryptor.Encrypt(plaintexts, featuresCiphertexts);
-            //PrintScale(plaintexts, "featurePlaintext");
-            //PrintScale(featuresCiphertexts, "featurefEncrypted");
-
-            clientStopwatch.Stop();
+            //Stopwatch predictStopWatch = new Stopwatch();
+            //predictStopWatch.Start();
 
             // Handle SV
 
 
-            Stopwatch innerProductStopwatch = new Stopwatch();
-            Stopwatch negateStopwatch = new Stopwatch();
-            Stopwatch degreeStopwatch = new Stopwatch();
+            //Stopwatch innerProductStopwatch = new Stopwatch();
+            //Stopwatch negateStopwatch = new Stopwatch();
+            //Stopwatch degreeStopwatch = new Stopwatch();
 
             Ciphertext tempCt = new Ciphertext();
 
@@ -254,8 +230,7 @@ namespace SecureSVC
                 innerProductStopwatch.Start();
                 if (USE_BATCH_INNER_PRODUCT)
                 {
-                    _kernels[i] = InnerProduct(featuresCiphertexts, _svPlaintexts, i, _sums, _numOfcolumnsCount,
-                        tempCt);
+                    _kernels[i] = InnerProduct(featuresCiphertexts, _svPlaintexts, i, _sums, _numOfcolumnsCount,tempCt);
                 }
 
 
@@ -353,7 +328,7 @@ namespace SecureSVC
                 PrintCyprherText(_decryptor, _kernels[i], _encoder, "kernel" + i);
 
             }
-            Stopwatch serverDecisionStopWatch = new Stopwatch();
+            //Stopwatch serverDecisionStopWatch = new Stopwatch();
             serverDecisionStopWatch.Start();
             // Encode coefficients : ParmsId! , scale!
             double scale2 = Math.Pow(2.0, _power);
@@ -437,29 +412,21 @@ namespace SecureSVC
             PrintScale(decisionTotal, "decisionTotal");  //Level 3
             List<double> result = PrintCyprherText(_decryptor, decisionTotal, _encoder, "finalTotal", true);
 
-            //using (System.IO.StreamWriter file =
-            //	new System.IO.StreamWriter(
-            //		$@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\GeneralPolyBatch_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
-            //)
-            //{
-            //	_firstTime = false;
-            //	file.WriteLine($"{TotalValue[0]}");
             serverDecisionStopWatch.Stop();
-            //}
-            Console.WriteLine($"client Init elapsed {clientStopwatch.ElapsedMilliseconds} ms");
-            Console.WriteLine($"server innerProductStopwatch elapsed {innerProductStopwatch.ElapsedMilliseconds} ms");
-            Console.WriteLine($"server negateStopwatch elapsed {negateStopwatch.ElapsedMilliseconds} ms");
-            Console.WriteLine($"server degreeStopwatch elapsed {degreeStopwatch.ElapsedMilliseconds} ms");
-            Console.WriteLine($"server Decision elapsed {serverDecisionStopWatch.ElapsedMilliseconds} ms");
+            long innerProductMilliseconds = innerProductStopwatch.ElapsedMilliseconds;
+            //Console.WriteLine($"server innerProductStopwatch elapsed {innerProductMilliseconds} ms");
+            long negateMilliseconds = negateStopwatch.ElapsedMilliseconds;
+            //Console.WriteLine($"server negateStopwatch elapsed {negateMilliseconds} ms");
+            long degreeMilliseconds = degreeStopwatch.ElapsedMilliseconds;
+            //Console.WriteLine($"server degreeStopwatch elapsed {degreeMilliseconds} ms");
+            long serverDecisionMilliseconds = serverDecisionStopWatch.ElapsedMilliseconds;
+            //Console.WriteLine($"server Decision elapsed {serverDecisionMilliseconds} ms");
+
+
+
+
             return decisionTotal;
-            //finalResult = result[0];
 
-            //            if (result[0] > 0)
-            //{
-            //	return 0;
-            //}
-
-            //return 1;
 
         }
 

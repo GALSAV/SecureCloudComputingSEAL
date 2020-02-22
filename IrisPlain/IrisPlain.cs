@@ -2,6 +2,7 @@
 using PlainSVC;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 
@@ -86,6 +87,8 @@ namespace IrisPlain
                    $@"{OutputDir}IrisPlain_{DateTime.Now.Day}_{DateTime.Now.ToShortTimeString().ToString().Replace(":","_")}.txt")
             )
             {
+                Stopwatch totalTime = new Stopwatch();
+                totalTime.Start();
                 for (int i = 0; i < numOfRows; i++)
                 {
                     double finalResult=-10000;
@@ -95,6 +98,9 @@ namespace IrisPlain
                     file.WriteLine($"{i} , {estimation} , {finalResult} ");
                     Console.WriteLine($"************************************************ \n");
                 }
+                totalTime.Stop();
+                file.WriteLine($" Total time for {numOfRows} samples :  {totalTime.ElapsedMilliseconds} ms  ");
+                file.WriteLine($" Avg time  :  {totalTime.ElapsedMilliseconds *1000 / numOfRows} microSec ");
             }
         }
     }

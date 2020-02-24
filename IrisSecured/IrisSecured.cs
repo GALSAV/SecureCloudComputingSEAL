@@ -5,14 +5,31 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace IrisSecured
 {
     class IrisSecured
     {
-        private const string OutputDir = @"C:\Output\";
 
-        static void Main(string[] args)
+
+	    class Result
+	    {
+		    public double   TotalValue;
+		    public int		Estimation;
+
+		    public Result(double totalValue, int estimation)
+		    {
+			    this.TotalValue = totalValue;
+			    this.Estimation = estimation;
+		    }
+	    }
+
+        private const string OutputDir = @"C:\Output\";
+        private const Boolean IS_PARALLEL = true;
+
+        static async Task Main(string[] args)
         {
             Console.WriteLine("Secure Iris");
             double[][] features;
@@ -123,53 +140,186 @@ namespace IrisSecured
 
            clientStopwatch.Stop();
 
-           Stopwatch innerProductStopwatch = new Stopwatch();
-           Stopwatch negateStopwatch = new Stopwatch();
-           Stopwatch degreeStopwatch = new Stopwatch();
-           Stopwatch serverDecisionStopWatch = new Stopwatch();
-            SVC clf = new SVC(vectors, coefficients, intercepts, "Linear", 0.25, 0.0, 3,40,publicKey,secretKey,relinKeys,galoisKeys,1,4);
+
             using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(
-                   $@"{OutputDir}IrisSecured_{DateTime.Now.Day}_{DateTime.Now.ToShortTimeString().ToString().Replace(":", "_")}.txt")
+                   $@"{OutputDir}IrisSecured_{IS_PARALLEL}_{DateTime.Now.Day}_{DateTime.Now.ToShortTimeString().ToString().Replace(":", "_")}.txt")
             )
             {
-	            Stopwatch totalTime = new Stopwatch();
-	            totalTime.Start();
-                for (int i = 0; i < numOfRows; i++)
-                {
-                    double finalResult = -10000;
-                    var plaintexts = new Plaintext();
-                    var featuresCiphertexts = new Ciphertext();
-                    _encoder.Encode(features[i], scale, plaintexts);
-                    _encryptor.Encrypt(plaintexts, featuresCiphertexts);
 
-   
-                    var cyphetResult= clf.Predict(featuresCiphertexts, true,true,innerProductStopwatch,degreeStopwatch,negateStopwatch,serverDecisionStopWatch);
-                    Plaintext plainResult = new Plaintext();
-                    _decryptor.Decrypt(cyphetResult, plainResult);
-                    List<double> result = new List<double>();
-                    _encoder.Decode(plainResult, result);
-                    finalResult = result[0];
-                    int estimation = finalResult > 0 ? 0 : 1;
-                    Console.WriteLine($"\n ************************************************");
-                    Console.WriteLine($"SVC estimation{i} is : {estimation} , result : {finalResult}");
-                    file.WriteLine($"{i} , {estimation} , {finalResult} ");
-                    Console.WriteLine($"************************************************ \n");
+
+                if ( IS_PARALLEL )
+	            {
+		            int processorCount = Environment.ProcessorCount;
+		            Console.WriteLine("Number Of Logical Processors: {0}", processorCount);
+
+		            SVC[] machines = new SVC[processorCount];
+
+		            Stopwatch[] innerProductStopwatchArr	= new Stopwatch[processorCount];
+		            Stopwatch[] negateStopwatchArr			= new Stopwatch[processorCount];
+                    Stopwatch[] degreeStopwatchArr			= new Stopwatch[processorCount];
+                    Stopwatch[] serverDecisionStopWatchArr = new Stopwatch[processorCount];
+                    Result[] results = new Result[numOfRows];
+
+                    Task[] tasks = new Task[processorCount];
+		            for (int i = 0; i < processorCount; i++)
+		            {
+			            machines[i] = new SVC(vectors, coefficients, intercepts, "Linear", 0.25, 0.0, 3, 40, publicKey, secretKey, relinKeys, galoisKeys, 1, 4);
+                        innerProductStopwatchArr[i]     = new Stopwatch();
+                        negateStopwatchArr[i]           = new Stopwatch();
+                        degreeStopwatchArr[i]           = new Stopwatch();
+                        serverDecisionStopWatchArr[i]   = new Stopwatch();
+
+                    }
+		            Stopwatch totalTime = new Stopwatch();
+		            totalTime.Start();
+                    for (int i = 0; i < numOfRows;)
+		            {
+
+			            for (int j = 0; j < processorCount && i < numOfRows; j++)
+			            {
+				            var secureSvc = machines[i % processorCount];
+				            var feature = features[i];
+				            //Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+				            List<object> l = new List<object>();
+				            l.Add(secureSvc);	//0
+				            l.Add(feature);		//1
+				            l.Add(i);			//2
+				            l.Add(_encoder);	//3
+				            l.Add(_encryptor);  //4
+				            l.Add(_decryptor);  //5
+                            l.Add(innerProductStopwatchArr[i % processorCount]);
+				            l.Add(degreeStopwatchArr[i % processorCount]);
+				            l.Add(negateStopwatchArr[i % processorCount]);
+				            l.Add(serverDecisionStopWatchArr[i % processorCount]);
+
+                            l.Add(results);
+				            tasks[j] = new TaskFactory().StartNew(new Action<object>((test) =>
+				            {
+					            List<object> l2 = (List<object>)test;
+					            SinglePredict((SVC)l2[0], (double[])l2[1], (int)l2[2], (CKKSEncoder)l2[3], (Encryptor)l2[4], (Decryptor)l2[5],(Stopwatch)l2[6], (Stopwatch)l2[7], (Stopwatch)l2[8], (Stopwatch)l2[9], scale,(Result[])l2[10]);
+				            }), l);
+				            i++;
+			            }
+
+			            await Task.WhenAll(tasks);
+
+		            }
+
+                    totalTime.Stop();
+
+                    for (int i = 0; i < numOfRows; i++)
+		            {
+			            var result = results[i];
+			            file.WriteLine($"{i} , {result.Estimation} , {result.TotalValue} ");
+                        //file.WriteLine($"SecureSVC estimation {i} is : {result.Estimation} , finalResult = {result.TotalValue}");
+
+		            }
+
+                    double innerProductTime = 0;
+                    double degreeTime		= 0;
+                    double negateTime		= 0;
+                    double serverTime		= 0;
+
+                    for (int i = 0; i < processorCount; i++)
+                    {
+	                    innerProductTime = innerProductStopwatchArr[i].ElapsedMilliseconds;
+	                    degreeTime		 = degreeStopwatchArr[i].ElapsedMilliseconds;
+	                    negateTime		 = negateStopwatchArr[i].ElapsedMilliseconds;
+                        serverTime		 = serverDecisionStopWatchArr[i].ElapsedMilliseconds;
+                    }
+		            file.WriteLine($" Client time :  {clientStopwatch.ElapsedMilliseconds} ms  ");
+		            file.WriteLine($" Total time for {numOfRows} samples :  {totalTime.ElapsedMilliseconds} ms  ");
+		            file.WriteLine($" Avg time  :  {totalTime.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+		            file.WriteLine($" Inner Product time for  {numOfRows} samples :  {innerProductTime} ms  ");
+		            file.WriteLine($" Inner Product Avg time  :  {innerProductTime * 1000 / numOfRows} microSec ");
+		            file.WriteLine($" Degree time for  {numOfRows} samples :  {degreeTime} ms  ");
+		            file.WriteLine($" Degree Avg time  :  {degreeTime * 1000 / numOfRows} microSec ");
+		            file.WriteLine($" Negate time for  {numOfRows} samples :  {negateTime} ms  ");
+		            file.WriteLine($" Negate Avg time  :  {negateTime * 1000 / numOfRows} microSec ");
+		            file.WriteLine($" Decision time for  {numOfRows} samples :  {serverTime} ms  ");
+		            file.WriteLine($" Decision Avg time  :  {serverTime * 1000 / numOfRows} microSec ");
+
                 }
-                totalTime.Stop();
-                file.WriteLine($" Client time :  {clientStopwatch.ElapsedMilliseconds} ms  ");
-                file.WriteLine($" Total time for {numOfRows} samples :  {totalTime.ElapsedMilliseconds} ms  ");
-                file.WriteLine($" Avg time  :  {totalTime.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
-                file.WriteLine($" Inner Product time for  {numOfRows} samples :  {innerProductStopwatch.ElapsedMilliseconds} ms  ");
-                file.WriteLine($" Inner Product Avg time  :  {innerProductStopwatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
-                file.WriteLine($" Degree time for  {numOfRows} samples :  {degreeStopwatch.ElapsedMilliseconds} ms  ");
-                file.WriteLine($" Degree Avg time  :  {degreeStopwatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
-                file.WriteLine($" Negate time for  {numOfRows} samples :  {negateStopwatch.ElapsedMilliseconds} ms  ");
-                file.WriteLine($" Negate Avg time  :  {negateStopwatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
-                file.WriteLine($" Decision time for  {numOfRows} samples :  {serverDecisionStopWatch.ElapsedMilliseconds} ms  ");
-                file.WriteLine($" Decision Avg time  :  {serverDecisionStopWatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+                else
+                {
+	                Stopwatch innerProductStopwatch = new Stopwatch();
+	                Stopwatch negateStopwatch = new Stopwatch();
+	                Stopwatch degreeStopwatch = new Stopwatch();
+	                Stopwatch serverDecisionStopWatch = new Stopwatch();
+	                SVC clf = new SVC(vectors, coefficients, intercepts, "Linear", 0.25, 0.0, 3, 40, publicKey, secretKey, relinKeys, galoisKeys, 1, 4);
+	                Stopwatch totalTime = new Stopwatch();
+	                totalTime.Start();
+	                for (int i = 0; i < numOfRows; i++)
+	                {
+		                double finalResult = -10000;
+		                var plaintexts = new Plaintext();
+		                var featuresCiphertexts = new Ciphertext();
+		                _encoder.Encode(features[i], scale, plaintexts);
+		                _encryptor.Encrypt(plaintexts, featuresCiphertexts);
+
+
+		                var cyphetResult = clf.Predict(featuresCiphertexts, true, true, innerProductStopwatch, degreeStopwatch, negateStopwatch, serverDecisionStopWatch);
+		                Plaintext plainResult = new Plaintext();
+		                _decryptor.Decrypt(cyphetResult, plainResult);
+		                List<double> result = new List<double>();
+		                _encoder.Decode(plainResult, result);
+		                finalResult = result[0];
+		                int estimation = finalResult > 0 ? 0 : 1;
+		                Console.WriteLine($"\n ************************************************");
+		                Console.WriteLine($"SVC estimation{i} is : {estimation} , result : {finalResult}");
+		                file.WriteLine($"{i} , {estimation} , {finalResult} ");
+		                Console.WriteLine($"************************************************ \n");
+	                }
+	                totalTime.Stop();
+	                file.WriteLine($" Client time :  {clientStopwatch.ElapsedMilliseconds} ms  ");
+	                file.WriteLine($" Total time for {numOfRows} samples :  {totalTime.ElapsedMilliseconds} ms  ");
+	                file.WriteLine($" Avg time  :  {totalTime.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+	                file.WriteLine($" Inner Product time for  {numOfRows} samples :  {innerProductStopwatch.ElapsedMilliseconds} ms  ");
+	                file.WriteLine($" Inner Product Avg time  :  {innerProductStopwatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+	                file.WriteLine($" Degree time for  {numOfRows} samples :  {degreeStopwatch.ElapsedMilliseconds} ms  ");
+	                file.WriteLine($" Degree Avg time  :  {degreeStopwatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+	                file.WriteLine($" Negate time for  {numOfRows} samples :  {negateStopwatch.ElapsedMilliseconds} ms  ");
+	                file.WriteLine($" Negate Avg time  :  {negateStopwatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+	                file.WriteLine($" Decision time for  {numOfRows} samples :  {serverDecisionStopWatch.ElapsedMilliseconds} ms  ");
+	                file.WriteLine($" Decision Avg time  :  {serverDecisionStopWatch.ElapsedMilliseconds * 1000 / numOfRows} microSec ");
+                }
+
+
+
+
 
             }
+
+
+
+        }
+
+        private static void SinglePredict(SVC secureSvc, double[] feature, int i, CKKSEncoder _encoder, Encryptor _encryptor,Decryptor _decryptor,
+	        Stopwatch innerProductStopwatch, Stopwatch degreeStopwatch, Stopwatch negateStopwatch, Stopwatch serverDecisionStopWatch, double scale, Result[] results)
+        {
+	        double finalResult = 0;
+	        Console.WriteLine($"start {i} \n");
+
+	        var plaintexts = new Plaintext();
+	        var featuresCiphertexts = new Ciphertext();
+	        _encoder.Encode(feature, scale, plaintexts);
+	        _encryptor.Encrypt(plaintexts, featuresCiphertexts);
+            var cyphetResult = secureSvc.Predict(featuresCiphertexts, true, true, innerProductStopwatch, degreeStopwatch, negateStopwatch, serverDecisionStopWatch);
+            //timePredictSum.Stop();
+            Plaintext plainResult = new Plaintext();
+            _decryptor.Decrypt(cyphetResult, plainResult);
+            List<double> result = new List<double>();
+            _encoder.Decode(plainResult, result);
+            finalResult = result[0];
+            int estimation = finalResult > 0 ? 0 : 1;
+            Console.WriteLine($"\n ************************************************");
+            Console.WriteLine($"SVC estimation{i} is : {estimation} , result : {finalResult}");
+            //file.WriteLine($"{i} , {estimation} , {finalResult} ");
+            Console.WriteLine($"************************************************ \n");
+            results[i] = new Result(finalResult, estimation);
+	        //Console.WriteLine($"SecureSVC estimation{i} is : {estimation} , finalResult = {finalResult} , Time = {timePredictSum.ElapsedMilliseconds}");
+
         }
     }
 }

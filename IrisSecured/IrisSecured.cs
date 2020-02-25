@@ -74,34 +74,7 @@ namespace IrisSecured
 
                 var bytes = Properties.Resources.iris;
                 numOfRows = 0;
-                Stream stream = new MemoryStream(bytes);
-                using (TextFieldParser csvParser = new TextFieldParser(stream))
-                {
-                    csvParser.CommentTokens = new string[] { "#" };
-                    csvParser.SetDelimiters(new string[] { "," });
-                    csvParser.HasFieldsEnclosedInQuotes = true;
-
-                    while (!csvParser.EndOfData)
-                    {
-                        // Read current line fields, pointer moves to the next line.
-                        string[] readFields = csvParser.ReadFields();
-                        double[] doubleValues = new double[readFields.Length];
-
-                        for (int j = 0; j < 4; j++)
-                        {
-                            doubleValues[j] = Double.Parse(readFields[j]);
-                        }
-                        rows.Add(doubleValues);
-                        numOfRows++;
-                    }
-                }
-
-                features = new double[numOfRows][];
-                for (int i = 0; i < numOfRows; i++)
-                {
-
-                    features[i] = rows[i]; //new double[numOfColums];
-                }
+                features = SVCUtilities.SVCUtilities.LoadFeatures(bytes, 4, ref numOfRows);
             }
             Stopwatch clientStopwatch = new Stopwatch();
             clientStopwatch.Start();
@@ -272,8 +245,7 @@ namespace IrisSecured
 	                Stopwatch negateStopwatch = new Stopwatch();
 	                Stopwatch degreeStopwatch = new Stopwatch();
 	                Stopwatch serverDecisionStopWatch = new Stopwatch();
-                    int batchSize = 200;
-                    int featureSize = 4;
+
                     int featureSizeWithSpace = featureSize;
                     if (batchSize>1)
                     {
@@ -406,5 +378,8 @@ namespace IrisSecured
 	        //Console.WriteLine($"SecureSVC estimation{i} is : {estimation} , finalResult = {finalResult} , Time = {timePredictSum.ElapsedMilliseconds}");
 
         }
+
+
+
     }
 }

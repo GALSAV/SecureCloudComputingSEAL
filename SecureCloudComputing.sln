@@ -32,6 +32,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IrisPlain", "IrisPlain\Iris
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IrisSecured", "IrisSecured\IrisSecured.csproj", "{72177D4B-1688-4BCA-A6CF-6ED5E9EF2A47}"
+	ProjectSection(ProjectDependencies) = postProject
+		{92158F33-65F0-41E1-A804-C59DD51F9E11} = {92158F33-65F0-41E1-A804-C59DD51F9E11}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MashroomPlain", "MashroomPlain\MashroomPlain.csproj", "{D4CB8DA3-5940-410F-A26D-99B705E6D588}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SVCUtilities", "SVCUtilities\SVCUtilities.csproj", "{92158F33-65F0-41E1-A804-C59DD51F9E11}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MashroomSecured", "MashroomSecured\MashroomSecured.csproj", "{D61C0378-ECB3-435E-ADFB-C170EEFF6198}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -70,6 +79,18 @@ Global
 		{72177D4B-1688-4BCA-A6CF-6ED5E9EF2A47}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{72177D4B-1688-4BCA-A6CF-6ED5E9EF2A47}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{72177D4B-1688-4BCA-A6CF-6ED5E9EF2A47}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4CB8DA3-5940-410F-A26D-99B705E6D588}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4CB8DA3-5940-410F-A26D-99B705E6D588}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4CB8DA3-5940-410F-A26D-99B705E6D588}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4CB8DA3-5940-410F-A26D-99B705E6D588}.Release|Any CPU.Build.0 = Release|Any CPU
+		{92158F33-65F0-41E1-A804-C59DD51F9E11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92158F33-65F0-41E1-A804-C59DD51F9E11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92158F33-65F0-41E1-A804-C59DD51F9E11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92158F33-65F0-41E1-A804-C59DD51F9E11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D61C0378-ECB3-435E-ADFB-C170EEFF6198}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D61C0378-ECB3-435E-ADFB-C170EEFF6198}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D61C0378-ECB3-435E-ADFB-C170EEFF6198}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D61C0378-ECB3-435E-ADFB-C170EEFF6198}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -14,7 +14,14 @@ namespace IrisSecured
     {
 
 
-	    class Result
+        /*************************************************************
+         * 
+         *  Class for paralel flow results :
+         *   TotalValue - The decision value of calculated by the svm 
+         *   Estimation - 0- first class , 1- second class
+         * 
+         * ************************************************************/
+        class Result
 	    {
 		    public double   TotalValue;
 		    public int		Estimation;
@@ -27,13 +34,25 @@ namespace IrisSecured
 	    }
 
         private const string OutputDir = @"C:\Output\";
-        private const Boolean IS_PARALLEL = true;
+        /**************************************************
+        * Two performance optimizations are posssible :
+        *   1. use all core's
+        *   2. do batch of input vectors , take advantage of SEAL batching
+        *
+        * ***************************************/
+        private const Boolean IS_PARALLEL = false;
 
         static async Task Main(string[] args)
         {
+
+
             Console.WriteLine("Secure Iris");
+            
+            // Get Input from resource file or as args
             double[][] features;
             int numOfRows = 0;
+
+            //args
             if (args.Length >= 4)
             {
                 numOfRows = args.Length / 4;
@@ -48,7 +67,8 @@ namespace IrisSecured
                     features[i / 4][i % 4] = Double.Parse(args[i]);
                 }
             }
-            else
+            //Properties files
+            else 
             {
                 List<double[]> rows = new List<double[]>();
 
@@ -86,6 +106,7 @@ namespace IrisSecured
             Stopwatch clientStopwatch = new Stopwatch();
             clientStopwatch.Start();
 
+            //svm algorithm parametrs calculated in python : training result
             double[][] vectors = new double[3][];
 
             vectors[0] = new[] { 5.1, 3.3, 1.7, 0.5 };
@@ -97,6 +118,8 @@ namespace IrisSecured
             double[] intercepts = { 0.9055182807973224 };
             int[] weights = { 2, 1 };
 
+
+            // SEAL parameters client side
             Console.WriteLine("SecureSVC : ");
 
             EncryptionParameters parms = new EncryptionParameters(SchemeType.CKKS);
@@ -197,7 +220,9 @@ namespace IrisSecured
 				            tasks[j] = new TaskFactory().StartNew(new Action<object>((test) =>
 				            {
 					            List<object> l2 = (List<object>)test;
+                               
 					            SinglePredict((SVC)l2[0], (double[])l2[1], (int)l2[2], (CKKSEncoder)l2[3], (Encryptor)l2[4], (Decryptor)l2[5],(Stopwatch)l2[6], (Stopwatch)l2[7], (Stopwatch)l2[8], (Stopwatch)l2[9], scale,(Result[])l2[10]);
+
 				            }), l);
 				            i++;
 			            }
@@ -247,29 +272,60 @@ namespace IrisSecured
 	                Stopwatch negateStopwatch = new Stopwatch();
 	                Stopwatch degreeStopwatch = new Stopwatch();
 	                Stopwatch serverDecisionStopWatch = new Stopwatch();
-	                SVC clf = new SVC(vectors, coefficients, intercepts, "Linear", 0.25, 0.0, 3, 40, publicKey, secretKey, relinKeys, galoisKeys, 1, 4);
+                    int batchSize = 200;
+                    int featureSize = 4;
+                    int featureSizeWithSpace = featureSize;
+                    if (batchSize>1)
+                    {
+                        featureSizeWithSpace = featureSize * 2;
+                    }
+                    
+                    SVC clf = new SVC(vectors, coefficients, intercepts, "Linear", 0.25, 0.0, 3, 40, publicKey, secretKey, relinKeys, galoisKeys, batchSize,featureSizeWithSpace);
 	                Stopwatch totalTime = new Stopwatch();
 	                totalTime.Start();
-	                for (int i = 0; i < numOfRows; i++)
+                    int start = 0;
+                    //double[] batchFeatures = new double[batchSize * featureSizeWithSpace];
+                    for (int i = 0; i < numOfRows;)
 	                {
+                        start = i;
 		                double finalResult = -10000;
-		                var plaintexts = new Plaintext();
+                        double[][] batchRows  = new double[batchSize][];
+                        for (int j= 0; j< batchSize && i < numOfRows; j++)
+                        {
+
+                            batchRows[j] = features[i];
+                            i++;
+                        }
+                        double[] batchFeatures = getBatchFeatures(batchRows, batchSize, featureSize, featureSizeWithSpace);
+
+
+                        var plaintexts = new Plaintext();
 		                var featuresCiphertexts = new Ciphertext();
-		                _encoder.Encode(features[i], scale, plaintexts);
+		                _encoder.Encode(batchFeatures, scale, plaintexts);
 		                _encryptor.Encrypt(plaintexts, featuresCiphertexts);
 
-
+                        //Server side start
 		                var cyphetResult = clf.Predict(featuresCiphertexts, true, true, innerProductStopwatch, degreeStopwatch, negateStopwatch, serverDecisionStopWatch);
+                        // Server side end
 		                Plaintext plainResult = new Plaintext();
 		                _decryptor.Decrypt(cyphetResult, plainResult);
 		                List<double> result = new List<double>();
 		                _encoder.Decode(plainResult, result);
-		                finalResult = result[0];
-		                int estimation = finalResult > 0 ? 0 : 1;
-		                Console.WriteLine($"\n ************************************************");
-		                Console.WriteLine($"SVC estimation{i} is : {estimation} , result : {finalResult}");
-		                file.WriteLine($"{i} , {estimation} , {finalResult} ");
-		                Console.WriteLine($"************************************************ \n");
+
+                        for (int j = 0; j < batchSize && start < numOfRows; j++)
+                        {
+
+                            finalResult = result[j* featureSizeWithSpace];
+                            int estimation = finalResult > 0 ? 0 : 1;
+                            Console.WriteLine($"\n ************************************************");
+                            Console.WriteLine($"SVC estimation{i} is : {estimation} , result : {finalResult}");
+                            file.WriteLine($"{start} , {estimation} , {finalResult} ");
+                            Console.WriteLine($"************************************************ \n");
+                            start++;
+                        }
+
+
+
 	                }
 	                totalTime.Stop();
 	                file.WriteLine($" Client time :  {clientStopwatch.ElapsedMilliseconds} ms  ");
@@ -286,12 +342,39 @@ namespace IrisSecured
                 }
 
 
-
-
-
             }
 
 
+
+        }
+
+        private static double[] getBatchFeatures(double[][] batchRows, int batchSize, int featureSize, int featureSizeWithSpace)
+        {
+            double[] batchFeatures = new double[batchSize * featureSizeWithSpace];
+            int k = 0;
+            for(int i=0;i< batchSize;i++)
+            {
+                for(int j=0;j< featureSize;j++)
+                {
+                    if(batchRows[i]!=null)
+                    { 
+                        batchFeatures[k] = batchRows[i][j];
+                    }
+                    else
+                    {
+                        batchFeatures[k] = 0;
+                    }
+                    k++;
+                }
+                for(int r=0;r< featureSizeWithSpace - featureSize; r++)
+                {
+                    batchFeatures[k] = 0;
+                    k++;
+                }
+
+
+            }
+            return batchFeatures;
 
         }
 
@@ -305,7 +388,9 @@ namespace IrisSecured
 	        var featuresCiphertexts = new Ciphertext();
 	        _encoder.Encode(feature, scale, plaintexts);
 	        _encryptor.Encrypt(plaintexts, featuresCiphertexts);
+            // Server side start
             var cyphetResult = secureSvc.Predict(featuresCiphertexts, true, true, innerProductStopwatch, degreeStopwatch, negateStopwatch, serverDecisionStopWatch);
+            // Server side end
             //timePredictSum.Stop();
             Plaintext plainResult = new Plaintext();
             _decryptor.Decrypt(cyphetResult, plainResult);

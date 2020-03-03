@@ -9,11 +9,18 @@ using System.Threading;
 
 namespace PlainSVC
 {
-    public class SVC
+    public class Svc
     {
+		/*
+		 *
+		 * Library class  for General plain SVM initialization and prediction
+		 *
+		 */
 
-        public const bool USE_OUTPUT = false;
+		// constatnt to control if console output is enabled for debugging purpose
+        public const bool UseOutput = false;
 
+		//Kernel types supported
         private enum Kernel
         {
             Linear,
@@ -22,19 +29,27 @@ namespace PlainSVC
             Sigmoid
         }
 
+		// number of classes for multivarient classification
         private readonly int _nClasses;
         private readonly int _nRows;
+
+		//the classes of multivarient classification
         private readonly int[] _classes;
+		//support vectors
         private readonly double[][] _vectors;
+
         private readonly double[][] _coefficients;
         private readonly double[] _intercepts;
+		
         private readonly int[] _weights;
+        //The type of kernel
         private readonly Kernel _kernel;
         private readonly double _gamma;
         private readonly double _coef0;
+		//polynomial degree for polynimial kerenel
         private readonly double _degree;
 
-        public SVC(int nClasses, int nRows, double[][] vectors, double[][] coefficients, double[] intercepts, int[] weights, String kernel, double gamma, double coef0, double degree)
+        public Svc(int nClasses, int nRows, double[][] vectors, double[][] coefficients, double[] intercepts, int[] weights, String kernel, double gamma, double coef0, double degree)
         {
 
 
@@ -76,7 +91,6 @@ namespace PlainSVC
                             kernel += this._vectors[i][j] * features[j];
                            
                         }
-                        //PrintConsole($"kernel += this.vectors[{i}][{j}] * features[{j}]");
 
                         kernels[i] = kernel;
                         PrintConsole($"inner product TotalValue {i} : {kernel}");
@@ -158,7 +172,8 @@ namespace PlainSVC
                 ends[i] = this._weights[i] + starts[i];
                PrintConsole($"ends[{i}] = this.weights[{i}] + starts[{i}]");
             }
-
+			
+            // Classification for 2 classes
             if (this._nClasses == 2)
             {
 
@@ -197,6 +212,7 @@ namespace PlainSVC
 
             }
 
+			//Multivarient classification
             double[] decisions = new double[this._intercepts.Length];
             for (int i = 0, d = 0, l = this._nRows; i < l; i++)
             {
@@ -250,10 +266,11 @@ namespace PlainSVC
 
         }
 
+        //Wrapper function for Console.WriteLine to configurable console output
 
         public void PrintConsole(String line)
         {
-            if (!USE_OUTPUT)
+            if (!UseOutput)
                 return;
             Console.WriteLine (line);
         }

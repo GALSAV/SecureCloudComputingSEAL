@@ -12,11 +12,15 @@ namespace IrisSecured
 {
     class IrisSecured
     {
-
+        /*
+		*  Class for a  client of Secured Iris classification
+		*  The application loads samples from Iris dataset which is stored in the resource of the application
+		*  A folder c:\Output must exist in order to properly run this application
+		*/
 
         /*************************************************************
          * 
-         *  Class for paralel flow results :
+         *  Result - Class for parallel flow results :
          *   TotalValue - The decision value of calculated by the svm 
          *   Estimation - 0- first class , 1- second class
          * 
@@ -40,7 +44,7 @@ namespace IrisSecured
         *   2. do batch of input vectors , take advantage of SEAL batching
         *
         * ***************************************/
-        private const Boolean IS_PARALLEL = false;
+        private const Boolean IsParallel = false;
 
         static async Task Main(string[] args)
         {
@@ -50,31 +54,32 @@ namespace IrisSecured
             
             // Get Input from resource file or as args
             double[][] features;
+            int numberOfFeatures = 4;
             int numOfRows = 0;
 
-            //args
-            if (args.Length >= 4)
+            // Option to load from args and not the whole dataset that is stored in resources
+            if (args.Length >= numberOfFeatures)
             {
-                numOfRows = args.Length / 4;
+                numOfRows = args.Length / numberOfFeatures;
                 // Features:
                 features = new double[numOfRows][];
                 for (int i = 0; i < numOfRows; i++)
                 {
-                    features[i] = new double[4];
+                    features[i] = new double[numberOfFeatures];
                 }
                 for (int i = 0, l = args.Length; i < l; i++)
                 {
-                    features[i / 4][i % 4] = Double.Parse(args[i]);
+                    features[i / numberOfFeatures][i % numberOfFeatures] = Double.Parse(args[i]);
                 }
             }
-            //Properties files
-            else 
+          
+            else  // load the whole dataset from resources
             {
                 List<double[]> rows = new List<double[]>();
 
                 var bytes = Properties.Resources.iris;
                 numOfRows = 0;
-                features = SVCUtilities.SVCUtilities.LoadFeatures(bytes, 4, ref numOfRows);
+                features = SVCUtilities.SvcUtilities.LoadFeatures(bytes, numberOfFeatures, ref numOfRows);
             }
             Stopwatch clientStopwatch = new Stopwatch();
             clientStopwatch.Start();
@@ -89,7 +94,6 @@ namespace IrisSecured
             double[][] coefficients = new double[1][];
             coefficients[0] = new double[] { -0.7407784813992192, -0.0025023664254470897, 0.7432808478246663 };
             double[] intercepts = { 0.9055182807973224 };
-            int[] weights = { 2, 1 };
 
 
             // SEAL parameters client side
@@ -122,34 +126,34 @@ namespace IrisSecured
 
             
 
-            var _context = new SEALContext(parms);
-            KeyGenerator keygen = new KeyGenerator(_context);
+            var context = new SEALContext(parms);
+            KeyGenerator keygen = new KeyGenerator(context);
             var publicKey = keygen.PublicKey;
             var secretKey = keygen.SecretKey;
             var relinKeys = keygen.RelinKeys();
 
             var galoisKeys = keygen.GaloisKeys();
-            var _encryptor = new Encryptor(_context, publicKey);
+            var encryptor = new Encryptor(context, publicKey);
            
-           var  _decryptor = new Decryptor(_context, secretKey);
-           var  _encoder = new CKKSEncoder(_context);
+           var  decryptor = new Decryptor(context, secretKey);
+           var  encoder = new CKKSEncoder(context);
 
            clientStopwatch.Stop();
 
 
             using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(
-                   $@"{OutputDir}IrisSecured_{IS_PARALLEL}_{DateTime.Now.Day}_{DateTime.Now.ToShortTimeString().ToString().Replace(":", "_")}.txt")
+                   $@"{OutputDir}IrisSecured_{IsParallel}_{DateTime.Now.Day}_{DateTime.Now.ToShortTimeString().ToString().Replace(":", "_")}.txt")
             )
             {
 
 
-                if ( IS_PARALLEL )
+                if ( IsParallel )
 	            {
 		            int processorCount = Environment.ProcessorCount;
 		            Console.WriteLine("Number Of Logical Processors: {0}", processorCount);
 
-		            SVC[] machines = new SVC[processorCount];
+		            Svc[] machines = new Svc[processorCount];
 
 		            Stopwatch[] innerProductStopwatchArr	= new Stopwatch[processorCount];
 		            Stopwatch[] negateStopwatchArr			= new Stopwatch[processorCount];
@@ -160,7 +164,7 @@ namespace IrisSecured
                     Task[] tasks = new Task[processorCount];
 		            for (int i = 0; i < processorCount; i++)
 		            {
-			            machines[i] = new SVC(vectors, coefficients, intercepts, "Linear", 0.25, 0.0, 3, 40, publicKey, secretKey, relinKeys, galoisKeys, 1, 4);
+			            machines[i] = new Svc(vectors, coefficients, intercepts, "Linear", 0.25, 0.0, 3, 40, publicKey/*, secretKey*/, relinKeys, galoisKeys, 1, 4);
                         innerProductStopwatchArr[i]     = new Stopwatch();
                         negateStopwatchArr[i]           = new Stopwatch();
                         degreeStopwatchArr[i]           = new Stopwatch();
@@ -181,9 +185,9 @@ namespace IrisSecured
 				            l.Add(secureSvc);	//0
 				            l.Add(feature);		//1
 				            l.Add(i);			//2
-				            l.Add(_encoder);	//3
-				            l.Add(_encryptor);  //4
-				            l.Add(_decryptor);  //5
+				            l.Add(encoder);	//3
+				            l.Add(encryptor);  //4
+				            l.Add(decryptor);  //5
                             l.Add(innerProductStopwatchArr[i % processorCount]);
 				            l.Add(degreeStopwatchArr[i % processorCount]);
 				            l.Add(negateStopwatchArr[i % processorCount]);
@@ -194,7 +198,7 @@ namespace IrisSecured
 				            {
 					            List<object> l2 = (List<object>)test;
                                
-					            SinglePredict((SVC)l2[0], (double[])l2[1], (int)l2[2], (CKKSEncoder)l2[3], (Encryptor)l2[4], (Decryptor)l2[5],(Stopwatch)l2[6], (Stopwatch)l2[7], (Stopwatch)l2[8], (Stopwatch)l2[9], scale,(Result[])l2[10]);
+					            SinglePredict((Svc)l2[0], (double[])l2[1], (int)l2[2], (CKKSEncoder)l2[3], (Encryptor)l2[4], (Decryptor)l2[5],(Stopwatch)l2[6], (Stopwatch)l2[7], (Stopwatch)l2[8], (Stopwatch)l2[9], scale,(Result[])l2[10]);
 
 				            }), l);
 				            i++;
@@ -246,13 +250,14 @@ namespace IrisSecured
 	                Stopwatch degreeStopwatch = new Stopwatch();
 	                Stopwatch serverDecisionStopWatch = new Stopwatch();
 
-                    int featureSizeWithSpace = featureSize;
+                    int featureSizeWithSpace = numberOfFeatures;
+                    int batchSize = 200;
                     if (batchSize>1)
                     {
-                        featureSizeWithSpace = featureSize * 2;
+                        featureSizeWithSpace = numberOfFeatures * 2;
                     }
                     
-                    SVC clf = new SVC(vectors, coefficients, intercepts, "Linear", 0.25, 0.0, 3, 40, publicKey, secretKey, relinKeys, galoisKeys, batchSize,featureSizeWithSpace);
+                    Svc clf = new Svc(vectors, coefficients, intercepts, "Linear", 0.25, 0.0, 3, 40, publicKey/*, secretKey*/, relinKeys, galoisKeys, batchSize,featureSizeWithSpace);
 	                Stopwatch totalTime = new Stopwatch();
 	                totalTime.Start();
                     int start = 0;
@@ -268,21 +273,21 @@ namespace IrisSecured
                             batchRows[j] = features[i];
                             i++;
                         }
-                        double[] batchFeatures = getBatchFeatures(batchRows, batchSize, featureSize, featureSizeWithSpace);
+                        double[] batchFeatures = GetBatchFeatures(batchRows, batchSize, numberOfFeatures, featureSizeWithSpace);
 
 
                         var plaintexts = new Plaintext();
 		                var featuresCiphertexts = new Ciphertext();
-		                _encoder.Encode(batchFeatures, scale, plaintexts);
-		                _encryptor.Encrypt(plaintexts, featuresCiphertexts);
+		                encoder.Encode(batchFeatures, scale, plaintexts);
+		                encryptor.Encrypt(plaintexts, featuresCiphertexts);
 
                         //Server side start
 		                var cyphetResult = clf.Predict(featuresCiphertexts, true, true, innerProductStopwatch, degreeStopwatch, negateStopwatch, serverDecisionStopWatch);
                         // Server side end
 		                Plaintext plainResult = new Plaintext();
-		                _decryptor.Decrypt(cyphetResult, plainResult);
+		                decryptor.Decrypt(cyphetResult, plainResult);
 		                List<double> result = new List<double>();
-		                _encoder.Decode(plainResult, result);
+		                encoder.Decode(plainResult, result);
 
                         for (int j = 0; j < batchSize && start < numOfRows; j++)
                         {
@@ -320,7 +325,7 @@ namespace IrisSecured
 
         }
 
-        private static double[] getBatchFeatures(double[][] batchRows, int batchSize, int featureSize, int featureSizeWithSpace)
+        private static double[] GetBatchFeatures(double[][] batchRows, int batchSize, int featureSize, int featureSizeWithSpace)
         {
             double[] batchFeatures = new double[batchSize * featureSizeWithSpace];
             int k = 0;
@@ -350,7 +355,8 @@ namespace IrisSecured
 
         }
 
-        private static void SinglePredict(SVC secureSvc, double[] feature, int i, CKKSEncoder _encoder, Encryptor _encryptor,Decryptor _decryptor,
+		//
+        private static void SinglePredict(Svc secureSvc, double[] feature, int i, CKKSEncoder encoder, Encryptor encryptor,Decryptor decryptor,
 	        Stopwatch innerProductStopwatch, Stopwatch degreeStopwatch, Stopwatch negateStopwatch, Stopwatch serverDecisionStopWatch, double scale, Result[] results)
         {
 	        double finalResult = 0;
@@ -358,16 +364,16 @@ namespace IrisSecured
 
 	        var plaintexts = new Plaintext();
 	        var featuresCiphertexts = new Ciphertext();
-	        _encoder.Encode(feature, scale, plaintexts);
-	        _encryptor.Encrypt(plaintexts, featuresCiphertexts);
+	        encoder.Encode(feature, scale, plaintexts);
+	        encryptor.Encrypt(plaintexts, featuresCiphertexts);
             // Server side start
             var cyphetResult = secureSvc.Predict(featuresCiphertexts, true, true, innerProductStopwatch, degreeStopwatch, negateStopwatch, serverDecisionStopWatch);
             // Server side end
             //timePredictSum.Stop();
             Plaintext plainResult = new Plaintext();
-            _decryptor.Decrypt(cyphetResult, plainResult);
+            decryptor.Decrypt(cyphetResult, plainResult);
             List<double> result = new List<double>();
-            _encoder.Decode(plainResult, result);
+            encoder.Decode(plainResult, result);
             finalResult = result[0];
             int estimation = finalResult > 0 ? 0 : 1;
             Console.WriteLine($"\n ************************************************");

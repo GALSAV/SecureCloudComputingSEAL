@@ -6,7 +6,7 @@ namespace BFV_TEST
     public class UnitTest1
     {
         [TestMethod]
-        public void TestBFV()
+        public void TestBfv()
         {
             //CalculateBFV()
 

@@ -8,9 +8,13 @@ using System.Threading.Tasks;
 
 namespace SVCUtilities
 {
-    public static class SVCUtilities
+    public static class SvcUtilities
     {
+		/*
+		 * Utility class for common static functions used in the solution
+		 */
 
+		//Function for parsing CSV dataset into multidimensional array
         public static double[][] LoadFeatures(byte[] bytes, int numberOfFeatuters, ref int numOfRows)
         {
             double[][] features;
@@ -47,7 +51,7 @@ namespace SVCUtilities
             return features;
         }
 
-
+		//Function to convert from two dimensional array to Jagged Array.
         public static T[][] ToJaggedArray<T>(this T[,] twoDimensionalArray)
         {
             int rowsFirstIndex = twoDimensionalArray.GetLowerBound(0);

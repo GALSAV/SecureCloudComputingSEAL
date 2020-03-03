@@ -8,255 +8,16 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading.Channels;
 
-namespace IrisSVNSecured
+namespace IrisSVMSecured
 {
-	class SVMBatchPoly
+	class SvmBatchPoly
 	{
 		private const bool   RunSvc      = true;
 		private const bool   RunIrisSvc  = false;
 		private const string OutputDir    = @"C:\Output\";
 
-        public class SVC
-		{
-			private enum Kernel
-			{
-				Linear,
-				Poly,
-				Rbf,
-				Sigmoid
-			}
-
-			private readonly int				_nClasses;
-			private readonly int				_nRows;
-			private readonly int[]			_classes;
-			private readonly double[][]		_vectors;
-			private readonly double[][]		_coefficients;
-			private readonly double[]		_intercepts;
-			private readonly int[]			_weights;
-			private readonly Kernel			_kernel;
-			private readonly double			_gamma;
-			private readonly double			_coef0;
-			private readonly double			_degree;
-
-			public SVC(int nClasses, int nRows, double[][] vectors, double[][] coefficients, double[] intercepts,
-				int[] weights, String kernel, double gamma, double coef0, double degree)
-			{
-
-
-				Console.WriteLine($"Create SVC with nClasses = {nClasses} , ");
-				this._nClasses = nClasses;
-				this._classes = new int[nClasses];
-				for (int i = 0; i < nClasses; i++)
-				{
-					this._classes[i] = i;
-				}
-
-				this._nRows = nRows;
-
-				this._vectors = vectors;
-				this._coefficients = coefficients;
-				this._intercepts = intercepts;
-				this._weights = weights;
-
-				this._kernel = Enum.Parse<Kernel>(kernel, true);
-				this._gamma = gamma;
-				this._coef0 = coef0;
-				this._degree = degree;
-			}
-
-			public int Predict(double[] features, out double finalResult)
-			{
-
-				double[] kernels = new double[_vectors.Length];
-				double kernel;
-				switch (this._kernel)
-				{
-					case Kernel.Linear:
-						// <x,x'>
-						for (int i = 0; i < this._vectors.Length; i++)
-						{
-							kernel = 0;
-							for (int j = 0; j < this._vectors[i].Length; j++)
-							{
-								kernel += this._vectors[i][j] * features[j];
-								//Console.WriteLine($"kernel += this.vectors[{i}][{j}] * features[{j}]");
-							}
-
-							kernels[i] = kernel;
-							//Console.WriteLine($"kernels[{i}] = {kernel}");
-							//Console.WriteLine("-----------------------------------------------------");
-						}
-
-						break;
-					case Kernel.Poly:
-						// (y<x,x'>+r)^d
-						for (int i = 0; i < this._vectors.Length; i++)
-						{
-							kernel = 0;
-							for (int j = 0; j < this._vectors[i].Length; j++)
-							{
-								kernel += this._vectors[i][j] * features[j];
-							}
-							Console.WriteLine($"inner product TotalValue {i} : {kernel}");
-							kernels[i] = Math.Pow((this._gamma * kernel) + this._coef0, this._degree);
-							Console.WriteLine($"kernels[{i}] = {kernels[i]}");
-						}
-
-						break;
-					case Kernel.Rbf:
-						// exp(-y|x-x'|^2)
-						for (int i = 0; i < this._vectors.Length; i++)
-						{
-							kernel = 0;
-							for (int j = 0; j < this._vectors[i].Length; j++)
-							{
-								kernel += Math.Pow(this._vectors[i][j] - features[j], 2);
-							}
-
-							kernels[i] = Math.Exp(-this._gamma * kernel);
-						}
-
-						break;
-					case Kernel.Sigmoid:
-						// tanh(y<x,x'>+r)
-						for (int i = 0; i < this._vectors.Length; i++)
-						{
-							kernel = 0;
-							for (int j = 0; j < this._vectors[i].Length; j++)
-							{
-								kernel += this._vectors[i][j] * features[j];
-							}
-
-							kernels[i] = Math.Tanh((this._gamma * kernel) + this._coef0);
-						}
-
-						break;
-				}
-
-				//Console.WriteLine("Calculate weights : ");
-				int[] starts = new int[this._nRows];
-				for (int i = 0; i < this._nRows; i++)
-				{
-					if (i != 0)
-					{
-						int start = 0;
-						for (int j = 0; j < i; j++)
-						{
-							start += this._weights[j];
-						}
-
-						starts[i] = start;
-						//Console.WriteLine($"starts[{i}] = {start}");
-
-					}
-					else
-					{
-						starts[0] = 0;
-						//Console.WriteLine($"starts[0] = 0");
-					}
-				}
-
-				int[] ends = new int[this._nRows];
-				for (int i = 0; i < this._nRows; i++)
-				{
-					ends[i] = this._weights[i] + starts[i];
-					//Console.WriteLine($"ends[{i}] = this.weights[{i}] + starts[{i}]");
-				}
-
-				if (this._nClasses == 2)
-				{
-
-					for (int i = 0; i < kernels.Length; i++)
-					{
-						kernels[i] = -kernels[i];
-					}
-
-					double decision = 0;
-					for (int k = starts[1]; k < ends[1]; k++)
-					{
-						decision += kernels[k] * this._coefficients[0][k];
-						//Console.WriteLine($"starts1 : decision += kernels[{k}] * this.coefficients[0][{k}]");
-						//Console.WriteLine($"starts1 : decision = {decision}");
-					}
-
-					for (int k = starts[0]; k < ends[0]; k++)
-					{
-						decision += kernels[k] * this._coefficients[0][k];
-						//Console.WriteLine($"starts0 : decision += kernels[{k}] * this.coefficients[0][{k}]");
-						//Console.WriteLine($"starts0 : decision = {decision}");
-					}
-
-					//Console.WriteLine($"Total decision = {decision}");
-					decision += this._intercepts[0];
-					
-					Console.WriteLine($"decision = {decision}");
-					finalResult = decision;
-
-                    if (decision > 0)
-					{
-						return 0;
-					}
-
-					return 1;
-
-				}
-
-				double[] decisions = new double[this._intercepts.Length];
-				for (int i = 0, d = 0, l = this._nRows; i < l; i++)
-				{
-					for (int j = i + 1; j < l; j++)
-					{
-						double tmp = 0;
-						for (int k = starts[j]; k < ends[j]; k++)
-						{
-							tmp += this._coefficients[i][k] * kernels[k];
-						}
-
-						for (int k = starts[i]; k < ends[i]; k++)
-						{
-							tmp += this._coefficients[j - 1][k] * kernels[k];
-						}
-
-						decisions[d] = tmp + this._intercepts[d];
-						d++;
-					}
-				}
-
-				int[] votes = new int[this._intercepts.Length];
-				for (int i = 0, d = 0, l = this._nRows; i < l; i++)
-				{
-					for (int j = i + 1; j < l; j++)
-					{
-						votes[d] = decisions[d] > 0 ? i : j;
-						d++;
-					}
-				}
-
-				int[] amounts = new int[this._nClasses];
-				for (int i = 0, l = votes.Length; i < l; i++)
-				{
-					amounts[votes[i]] += 1;
-				}
-
-				int classVal = -1, classIdx = -1;
-				for (int i = 0, l = amounts.Length; i < l; i++)
-				{
-					if (amounts[i] > classVal)
-					{
-						classVal = amounts[i];
-						classIdx = i;
-					}
-				}
-
-				finalResult = -1;
-
-                return this._classes[classIdx];
-
-			}
-		}
-
-
-		public class SecureSVC
+       
+		public class SecureSvc
 		{
 			private enum Kernel
 			{
@@ -273,7 +34,6 @@ namespace IrisSVNSecured
 			private readonly double[][]		_vectors;
 			private readonly double[][]		_coefficients;
 			private readonly double[]		_intercepts;
-			private int[]			        _weights;
 			private readonly Kernel			_kernel;
 			private readonly double			_gamma;
 			private readonly double			_coef0;
@@ -291,13 +51,13 @@ namespace IrisSVNSecured
 
 			//private static bool _firstTime = true;
 
-			private const bool PRINT_SCALE		 = false;
-            private const bool PRINT_EXACT_SCALE = false;
-            private const bool PRINT_CIPHER_TEXT = false;
+			private const bool PRINT_SCALE = false;
+            private const bool PrintExactScale = false;
+            private const bool PrintCipherText = false;
             //private static Decryptor _decryptor;
 
-            public SecureSVC(int nRows, double[][] vectors, double[][] coefficients, double[] intercepts,
-				int[] weights, String kernel, double gamma, double coef0, ulong degree , int power)
+            public SecureSvc(int nRows, double[][] vectors, double[][] coefficients, double[] intercepts,
+				 String kernel, double gamma, double coef0, ulong degree , int power)
 			{
 
 
@@ -306,7 +66,6 @@ namespace IrisSVNSecured
 				this._vectors		= vectors;
 				this._coefficients	= coefficients;
 				this._intercepts		= intercepts;
-				this._weights		= weights;
 
 				this._kernel			= Enum.Parse<Kernel>(kernel, true);
 				this._gamma			= gamma;
@@ -625,14 +384,6 @@ namespace IrisSVNSecured
 				PrintScale(decisionTotal, "decisionTotal");  //Level 3
 				List<double> result = PrintCyprherText(_decryptor, decisionTotal, _encoder, "finalTotal",true);
 
-                //using (System.IO.StreamWriter file =
-                //	new System.IO.StreamWriter(
-                //		$@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\GeneralPolyBatch_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
-                //)
-                //{
-                //	_firstTime = false;
-                //	file.WriteLine($"{TotalValue[0]}");
-                //}
                 serverDecisionStopWatch.Stop();
 
                 Console.WriteLine($"client Init elapsed {clientStopwatch.ElapsedMilliseconds} ms");
@@ -657,7 +408,7 @@ namespace IrisSVNSecured
 			private static void PrintScale(Ciphertext ciphertext, String name)
 			{
 				if (!PRINT_SCALE) return;
-				if (PRINT_EXACT_SCALE) { 
+				if (PrintExactScale) { 
 					Console.Write($"    + Exact scale of {name}:");
 				Console.WriteLine(" {0:0.0000000000}", ciphertext.Scale);
 				}
@@ -669,7 +420,7 @@ namespace IrisSVNSecured
 			private static void PrintScale(Plaintext plaintext, String name)
 			{
 				if (!PRINT_SCALE) return;
-                if (PRINT_EXACT_SCALE)
+                if (PrintExactScale)
 				{
 					Console.Write($"    + Exact scale of {name}:");
 					Console.WriteLine(" {0:0.0000000000}", plaintext.Scale);
@@ -681,7 +432,7 @@ namespace IrisSVNSecured
 
 			private static List<double> PrintCyprherText(Decryptor decryptor, Ciphertext ciphertext, CKKSEncoder encoder,String name,bool print=false)
 			{
-				if (!PRINT_CIPHER_TEXT&& !print) return null;
+				if (!PrintCipherText&& !print) return null;
 				Plaintext plainResult = new Plaintext();
 				decryptor.Decrypt(ciphertext, plainResult);
 				List<double> result = new List<double>();
@@ -765,48 +516,13 @@ namespace IrisSVNSecured
 			double[][] coefficients = new double[1][];
 			coefficients[0] = new double[] { -0.008885899026071108, -0.0005100630977269122, 0.009395962123798021 };
 			double[] intercepts = { 1.1358388232934824 };
-			int[] weights = {2, 1};
-
-			if (RunSvc)
-			{
-				Console.WriteLine("SVC : ");
-				Stopwatch constructorPredictSum = new Stopwatch();
-				constructorPredictSum.Start();
-                SVC clf = new SVC(2, 2, vectors, coefficients, intercepts, weights, "poly", 0.25, 0.0, 3);
-                constructorPredictSum.Stop();
-                using (System.IO.StreamWriter file =
-					new System.IO.StreamWriter(
-						$@"{OutputDir}SVMBatchPoly_RunSvc_classification_result.txt")
-				)
-				{
-					Stopwatch timePredictSum = new Stopwatch();
-                    for (int i = 0; i < numOfRows; i++)
-					{
-						timePredictSum.Start();
-                        int estimation = clf.Predict(features[i], out var finalResult);
-                        timePredictSum.Stop();
-                        Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-						Console.WriteLine($"SVC estimation{i} is : {estimation} ");
-						file.WriteLine($"SVC estimation{i} is : {estimation} finalResult = {finalResult}");
-						Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");
-					}
-                    int avgPredict = (int)(timePredictSum.Elapsed.TotalMilliseconds / numOfRows);
-                    Console.WriteLine($"Constructor: {constructorPredictSum.Elapsed.TotalMilliseconds} ms");
-                    Console.WriteLine($"Average Predict: {avgPredict} ms");
-                    Console.WriteLine($"Total time Predict: {timePredictSum.Elapsed.TotalMilliseconds} ms");
-                    file.WriteLine($"Constructor: {constructorPredictSum.Elapsed.TotalMilliseconds} ms");
-                    file.WriteLine($"Average Predict: {avgPredict} ms");
-                    file.WriteLine($"Total time Predict: {timePredictSum.Elapsed.TotalMilliseconds} ms");
-                }
-			}
 
 
 			Console.WriteLine("\n\n SecureSVC : ");
 			int scale = 40;
-			SecureSVC clf3 =
-				new SecureSVC(2, vectors, coefficients, intercepts, weights, "poly", 0.25, 0.0, 3,scale);
+			SecureSvc clf3 =
+				new SecureSvc(2, vectors, coefficients, intercepts, "poly", 0.25, 0.0, 3,scale);
 			;
-			//IrisSVC clf = new IrisSVC( 2, vectors, coefficients, intercepts/*, weights, "poly"*/, 0.25, 0.0, 3);
 			
 			bool useRelinearizeInplace = true;
 			bool useReScale = true;

@@ -5,73 +5,107 @@ using System.Diagnostics;
 
 namespace SecureSVC
 {
-    public class SVC
+    public class Svc
     {
+
+        /// <summary>
+        ///  Library class  for General plain SVM initialization and prediction
+        /// </summary>
+        
+
+		// The secure svm version support only this kernels
         private enum Kernel
         {
             Linear,
             Poly,
         }
 
-
+		//Support vectors of the svm
         private readonly double[][] _vectors;
         private readonly double[][] _coefficients;
         private readonly double[] _intercepts;
-  //      private int[] _weights;
         private readonly Kernel _kernel;
         private readonly double _gamma;
         private readonly double _coef0;
         private readonly ulong _degree;
+
+        //The power of the scale to be used , determines the calculations percision
         private readonly int _power;
+
         private readonly SEALContext _context;
         private readonly PublicKey _publicKey;
         private readonly SecretKey _secretKey;
         private readonly RelinKeys _relinKeys;
         private readonly GaloisKeys _galoisKeys;
-        //private readonly Encryptor _encryptor;
         private readonly Evaluator _evaluator;
         private readonly Decryptor _decryptor;
         private readonly CKKSEncoder _encoder;
+
+        //Number of Support Vectors
         private readonly int _numOfrowsCount;
+        //Number of Support Features
         private readonly int _numOfcolumnsCount;
+        // Support vectors plaintexts used in batch inner product calculation
         private readonly Plaintext[] _svPlaintexts;
+        // intermidiate sums ciphertext
         private readonly Ciphertext[] _sums;
+        // kernels  ciphertext
         private readonly Ciphertext[] _kernels;
+        // decision arrays ciphertext
         private readonly Ciphertext[] _decisionsArr;
+		//Plaintext for coef
         private readonly Plaintext[] _coefArr;
+        //Plaintext for gamma that is used in polynimial kernel
         private readonly Plaintext _gamaPlaintext;
+        // Support vectors plaintexts used in simple inner product calculation
         private Plaintext[,] _svPlaintextsArr;
+        // Ciphertexts of inner product sums needed in  simple inner product calculation
         private Ciphertext[] _innerProdSums;
+		// scale = 2^power 
         private double _scale;
-        private const double ZERO = 1.0E-9;
+		// encoding of zero causes eception , some svm parametrs like a index of svm vectors can be zero 
+		// To avoid eception we use very small number that won't effect the calculation result
+        private const double Zero = 1.0E-9;
 
-        //private static bool _firstTime = true;
-
+		// Flags for debug or alggorithm selection purposes
         private const bool PRINT_SCALE = false;
-        private const bool PRINT_EXACT_SCALE = false;
-        private const bool PRINT_CIPHER_TEXT = false;
+        private const bool PrintExactScale = false;
+        private const bool PrintCipherText = false;
+        private const bool UseBatchInnerProduct = true;
 
-        private const bool USE_BATCH_INNER_PRODUCT = true;
 
 
-        //private static Decryptor _decryptor;
+        public Svc(double[][] vectors, double[][] coefficients, double[] intercepts, String kernel, double gamma,
+	        double coef0, ulong degree, int power, PublicKey publicKey, RelinKeys relinKeys,
+	        GaloisKeys galoisKeys, int batchSize, int featureSize) : this(vectors, coefficients, intercepts, kernel, gamma, coef0, degree, power, publicKey, null,relinKeys,galoisKeys,batchSize,featureSize)
+        {
+			
+        }
 
-        public SVC(double[][] vectors, double[][] coefficients, double[] intercepts,/*int[] weights,*/ String kernel, double gamma, double coef0, ulong degree, int power, PublicKey publicKey, SecretKey secretKey, RelinKeys relinKeys, GaloisKeys galoisKeys,int batchSize,int featureSize)
+        //constructor for debugging , because it enables to pass secretkey which will not happen in real life
+        // special parameters :
+        //  batchsize - number of batches sample in one ciphertext ,if the client batches mulitple  samples in the ciphertet .
+        //  featureSize - number of features in sample
+		
+        private Svc(double[][] vectors, double[][] coefficients, double[] intercepts,String kernel, double gamma, double coef0, ulong degree, int power, PublicKey publicKey, SecretKey secretKey, RelinKeys relinKeys, GaloisKeys galoisKeys,int batchSize,int featureSize)
         {                                                                                                                                                                                  
-            //this._nRows			= nRows;
 
             this._vectors = vectors;
             this._coefficients = coefficients;
             this._intercepts = intercepts;
-           // this._weights = weights;
 
             this._kernel = (Kernel)System.Enum.Parse(typeof(Kernel), kernel);
             this._gamma = gamma;
             this._coef0 = coef0;
             this._degree = degree;
             this._power = power;
+			//Use the ckks SCheme
             EncryptionParameters parms = new EncryptionParameters(SchemeType.CKKS);
 
+            // polyModulusDegree and CoeffModulus used for general SVM algorithm and depends on the polynomial kernel degree
+			// ( and the percision constraint ) . 
+			// My implementation can be used up to dgree = 4 , but it can be easly refactored with some oprimizations  to higher 
+			// polynomial degree
             ulong polyModulusDegree = 16384;
 
             if (power >= 20 && power < 40)
@@ -95,20 +129,15 @@ namespace SecureSVC
 
 
 
-            //KeyGenerator keygen = new KeyGenerator(_context);
             _publicKey = publicKey;
             _secretKey = secretKey;
             _relinKeys = relinKeys;
-            //if (USE_BATCH_INNER_PRODUCT)
-            //{
-                _galoisKeys = galoisKeys;
-            //}
+	        _galoisKeys = galoisKeys;
 
-            //_encryptor = new Encryptor(_context, _publicKey);
             _evaluator = new Evaluator(_context);
-            _decryptor = new Decryptor(_context, _secretKey); //FOR DEBUG ONLY ( not used in real server)
+			if(_secretKey != null)
+				_decryptor = new Decryptor(_context, _secretKey); //FOR DEBUG ONLY ( not used in real server)
             _encoder = new CKKSEncoder(_context);
-
 
 
             Stopwatch serverInitStopwatch = new Stopwatch();
@@ -116,18 +145,17 @@ namespace SecureSVC
 
 
 
-            _numOfrowsCount = _vectors.Length; //Number of Support Vectors
-            _numOfcolumnsCount = _vectors[0].Length; //Number of features in every Support vector
+            _numOfrowsCount = _vectors.Length;			//Number of Support Vectors
+            _numOfcolumnsCount = _vectors[0].Length;	//Number of features in every Support vector
             _scale = Math.Pow(2.0, _power);
-            ////////////////////////////////////////////////////////////////////////
-            ///
-            ///	vars for batch rotations
-            /// 
+
+
+            //	vars for batch rotations
             _svPlaintexts = new Plaintext[_numOfrowsCount];
 
-            //Encode SV
+            //Encode support vectors
             _sums = new Ciphertext[_numOfrowsCount];
-            if (USE_BATCH_INNER_PRODUCT)
+            if (UseBatchInnerProduct)
             {
 
                 double[] batchVectors = new double[batchSize * featureSize];
@@ -166,7 +194,7 @@ namespace SecureSVC
                     {
                         _svPlaintextsArr[i, j] = new Plaintext();
 
-                        _encoder.Encode(_vectors[i][j] != 0 ? _vectors[i][j] : ZERO, _scale, _svPlaintextsArr[i, j]);
+                        _encoder.Encode(_vectors[i][j] != 0 ? _vectors[i][j] : Zero, _scale, _svPlaintextsArr[i, j]);
                         PrintScale(_svPlaintextsArr[i, j], $"supportVectorsPlaintext[{i}][{j}]");
                     }
                 }
@@ -178,8 +206,6 @@ namespace SecureSVC
                     _innerProdSums[i] = new Ciphertext();
                 }
                 //////////////////////////////////////////////////////////////
-
-
 
             }
 
@@ -195,40 +221,32 @@ namespace SecureSVC
                 _coefArr[i] = new Plaintext();
             }
             _gamaPlaintext = new Plaintext();
-            _encoder.Encode(_gamma != 0 ? _gamma : ZERO, _scale, _gamaPlaintext);
+            _encoder.Encode(_gamma != 0 ? _gamma : Zero, _scale, _gamaPlaintext);
 
 
             serverInitStopwatch.Stop();
             Console.WriteLine($"server Init elapsed {serverInitStopwatch.ElapsedMilliseconds} ms");
         }
 
+
+        // Function for classification of samples 
+        // I follow the SEAL eamples recomandations to rescale and relinearize after each calculation.
+        // useRelinearizeInplace and useReScale should be always true.
+		// This parametrs are enabled only for debugging and learning purpose.
         public Ciphertext  Predict(    Ciphertext featuresCiphertexts, bool useRelinearizeInplace, bool useReScale,
 	        Stopwatch innerProductStopwatch, Stopwatch degreeStopwatch, Stopwatch negateStopwatch, Stopwatch serverDecisionStopWatch)
         {
 
-            //Stopwatch predictStopWatch = new Stopwatch();
-            //predictStopWatch.Start();
-
-            // Handle SV
-
-
-            //Stopwatch innerProductStopwatch = new Stopwatch();
-            //Stopwatch negateStopwatch = new Stopwatch();
-            //Stopwatch degreeStopwatch = new Stopwatch();
-
             Ciphertext tempCt = new Ciphertext();
-
-
-
 
             // Level 1
             for (int i = 0; i < _numOfrowsCount; i++)
             {
-                //Console.WriteLine(i);
 
                 //inner product
+                //calculate IP = < x, x'>
                 innerProductStopwatch.Start();
-                if (USE_BATCH_INNER_PRODUCT)
+                if (UseBatchInnerProduct)
                 {
                     _kernels[i] = InnerProduct(featuresCiphertexts, _svPlaintexts, i, _sums, _numOfcolumnsCount,tempCt);
                 }
@@ -250,15 +268,19 @@ namespace SecureSVC
                 PrintScale(_kernels[i], "1. kernels" + i);
                 _kernels[i].Scale = _scale;
 
-
+				//For polynimial kernel calculate 
                 if (_kernel == Kernel.Poly)
                 {
-
+                    // calculate (y *IP+r)^d
+                    // IP is calculated previously
+                    // y = gamma
+                    // r = _coef0
                     if (useReScale)
                     {
                         ParmsId lastParmsId = _kernels[i].ParmsId;
                         _evaluator.ModSwitchToInplace(_gamaPlaintext, lastParmsId);
                     }
+                    //calculate y * IP
                     _evaluator.MultiplyPlainInplace(_kernels[i], _gamaPlaintext);
                     PrintScale(_kernels[i], "2. kernels" + i);
                     if (useRelinearizeInplace)
@@ -272,6 +294,7 @@ namespace SecureSVC
                     }
                     PrintScale(_kernels[i], "3.  kernels" + i);
 
+					// add r
                     if (Math.Abs(_coef0) > 0)
                     {
                         Plaintext coef0Plaintext = new Plaintext();
@@ -289,6 +312,7 @@ namespace SecureSVC
 
                     PrintScale(_kernels[i], "4.  kernels" + i);
                     degreeStopwatch.Start();
+					// calculate the polynom degree
                     var kernel = new Ciphertext(_kernels[i]);
                     for (int d = 0; d < (int)_degree - 1; d++)
                     {
@@ -316,8 +340,6 @@ namespace SecureSVC
                     degreeStopwatch.Stop();
                 }
 
-
-
                 negateStopwatch.Start();
 
                 _evaluator.NegateInplace(_kernels[i]);
@@ -328,7 +350,6 @@ namespace SecureSVC
                 PrintCyprherText(_decryptor, _kernels[i], _encoder, "kernel" + i);
 
             }
-            //Stopwatch serverDecisionStopWatch = new Stopwatch();
             serverDecisionStopWatch.Start();
             // Encode coefficients : ParmsId! , scale!
             double scale2 = Math.Pow(2.0, _power);
@@ -342,8 +363,6 @@ namespace SecureSVC
                 _encoder.Encode(_coefficients[0][i], scale2, _coefArr[i]);
                 PrintScale(_coefArr[i], "coefPlainText" + i);
             }
-
-
 
             if (useReScale)
             {
@@ -423,13 +442,12 @@ namespace SecureSVC
             //Console.WriteLine($"server Decision elapsed {serverDecisionMilliseconds} ms");
 
 
-
-
             return decisionTotal;
 
 
         }
 
+		//Function for calculating secured batched inner product
         private Ciphertext InnerProduct(Ciphertext featuresCiphertexts, Plaintext[] svPlaintexts, int i, Ciphertext[] sums, int numOfcolumnsCount, Ciphertext tempCt)
         {
             _evaluator.MultiplyPlain(featuresCiphertexts, svPlaintexts[i], sums[i]);
@@ -445,10 +463,11 @@ namespace SecureSVC
             return sum;
         }
 
+		//Function for conditionally printing the scale of the ciphertext for debug 
         private static void PrintScale(Ciphertext ciphertext, String name)
         {
             if (!PRINT_SCALE) return;
-            if (PRINT_EXACT_SCALE)
+            if (PrintExactScale)
             {
                 Console.Write($"    + Exact scale of {name}:");
                 Console.WriteLine(" {0:0.0000000000}", ciphertext.Scale);
@@ -458,10 +477,11 @@ namespace SecureSVC
                     Math.Log(ciphertext.Scale, newBase: 2)/*, _decryptor.InvariantNoiseBudget(ciphertext)*/);
         }
 
+        //Function for conditionally printing the scale of the plaintext for debug 
         private static void PrintScale(Plaintext plaintext, String name)
         {
             if (!PRINT_SCALE) return;
-            if (PRINT_EXACT_SCALE)
+            if (PrintExactScale)
             {
                 Console.Write($"    + Exact scale of {name}:");
                 Console.WriteLine(" {0:0.0000000000}", plaintext.Scale);
@@ -471,9 +491,11 @@ namespace SecureSVC
                 Math.Log(plaintext.Scale, newBase: 2));
         }
 
+        //Function for printing the cipher text for debug 
         private static List<double> PrintCyprherText(Decryptor decryptor, Ciphertext ciphertext, CKKSEncoder encoder, String name, bool print = false)
         {
-            if (!PRINT_CIPHER_TEXT && !print) return null;
+            if (!PrintCipherText && !print) return null;
+            if (decryptor == null) return null;
             Plaintext plainResult = new Plaintext();
             decryptor.Decrypt(ciphertext, plainResult);
             List<double> result = new List<double>();

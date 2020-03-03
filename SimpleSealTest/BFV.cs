@@ -6,42 +6,42 @@ using System.Text;
 
 namespace SimpleSealTest
 {
-    class BFV
+    class Bfv
     {
-        private  SEALContext context;
-        private Encryptor encryptor;
-        private Evaluator evaluator;
-        private Decryptor decryptor;
-        private KeyGenerator keygen;
+        private  SEALContext _context;
+        private Encryptor _encryptor;
+        private Evaluator _evaluator;
+        private Decryptor _decryptor;
+        private KeyGenerator _keygen;
         private const int ModulosValue = 1024;
-        private static readonly Plaintext plainOne = new Plaintext("1");
-        private static readonly Plaintext plainFour = new Plaintext("4");
+        private static readonly Plaintext PlainOne = new Plaintext("1");
+        private static readonly Plaintext PlainFour = new Plaintext("4");
 
-        public BFV()
+        public Bfv()
         {
-            context = createContext();
-            keygen = new KeyGenerator(context);
-            PublicKey publicKey = keygen.PublicKey;
-            SecretKey secretKey = keygen.SecretKey;
+            _context = CreateContext();
+            _keygen = new KeyGenerator(_context);
+            PublicKey publicKey = _keygen.PublicKey;
+            SecretKey secretKey = _keygen.SecretKey;
 
-            encryptor = new Encryptor(context, publicKey);
+            _encryptor = new Encryptor(_context, publicKey);
 
             //Server side
-            evaluator = new Evaluator(context);
+            _evaluator = new Evaluator(_context);
 
-            decryptor = new Decryptor(context, secretKey);
+            _decryptor = new Decryptor(_context, secretKey);
         }
 
         public static void Main(string[] args)
         {
             for (ulong i = 0; i < 50; i++)
             {
-                BFV bfv = new BFV();
-                bfv.CalculateBFV(i);
+                Bfv bfv = new Bfv();
+                bfv.CalculateBfv(i);
             }
         }
 
-        public  void CalculateBFV(ulong evalVal)
+        public  void CalculateBfv(ulong evalVal)
         {
             Console.WriteLine();
             Console.WriteLine();
@@ -57,12 +57,12 @@ namespace SimpleSealTest
             Plaintext xPlain = new Plaintext(s);
     
             Ciphertext xEncrypted = new Ciphertext();
-            encryptor.Encrypt(xPlain, xEncrypted);
+            _encryptor.Encrypt(xPlain, xEncrypted);
 
             Ciphertext encrypedEvaluationNaive = ComputePolynomEvaluationNaive(xEncrypted);
-            Console.WriteLine($"     ---- {decryptor.InvariantNoiseBudget(encrypedEvaluationNaive)}");
+            Console.WriteLine($"     ---- {_decryptor.InvariantNoiseBudget(encrypedEvaluationNaive)}");
             Plaintext decryptedResult = new Plaintext();
-            decryptor.Decrypt(encrypedEvaluationNaive, decryptedResult);
+            _decryptor.Decrypt(encrypedEvaluationNaive, decryptedResult);
 
             //var ulong2Hex = Utilities.Ulong2Hex(evalVal);
             var expectedValue = (((evalVal * evalVal + 1) * (evalVal + 1) * (evalVal + 1)) * 4) % ModulosValue;
@@ -129,7 +129,7 @@ namespace SimpleSealTest
             //Utilities.PrintLine();
             var polinomEvaluation = PolinomEvaluationRelinearization(xSqPlusOne, xPlusOneSq);
             decryptedResult = new Plaintext();
-            decryptor.Decrypt(polinomEvaluation, decryptedResult);
+            _decryptor.Decrypt(polinomEvaluation, decryptedResult);
             if (decryptedResult[0] == expectedValue)
             {
                 Console.WriteLine($"0x{decryptedResult} ...... Correct.");
@@ -155,38 +155,38 @@ namespace SimpleSealTest
         private Ciphertext PolinomEvaluationRelinearization(Ciphertext xSqPlusOne, Ciphertext xPlusOneSq)
         {
             Console.WriteLine("Compute and relinearize encryptedResult (4(x^2+1)(x+1)^2).");
-            evaluator.MultiplyPlainInplace(xSqPlusOne, plainFour);
+            _evaluator.MultiplyPlainInplace(xSqPlusOne, PlainFour);
             Ciphertext polinomEvaluation = new Ciphertext();
-            evaluator.Multiply(xSqPlusOne, xPlusOneSq, polinomEvaluation);
-            RelinKeys relinKeys = keygen.RelinKeys();
-            evaluator.RelinearizeInplace(polinomEvaluation, relinKeys);
+            _evaluator.Multiply(xSqPlusOne, xPlusOneSq, polinomEvaluation);
+            RelinKeys relinKeys = _keygen.RelinKeys();
+            _evaluator.RelinearizeInplace(polinomEvaluation, relinKeys);
             return polinomEvaluation;
         }
 
         private Ciphertext XPlusOneSqRelinearize(Ciphertext xEncrypted)
         {
             Ciphertext xPlusOne = new Ciphertext();
-            evaluator.AddPlain(xEncrypted, plainOne, xPlusOne);
+            _evaluator.AddPlain(xEncrypted, PlainOne, xPlusOne);
             Ciphertext xPlusOneSq = new Ciphertext();
             ;
-            evaluator.Square(xPlusOne, xPlusOneSq);
-            RelinKeys relinKeys = keygen.RelinKeys();
-            evaluator.RelinearizeInplace(xPlusOneSq, relinKeys);
+            _evaluator.Square(xPlusOne, xPlusOneSq);
+            RelinKeys relinKeys = _keygen.RelinKeys();
+            _evaluator.RelinearizeInplace(xPlusOneSq, relinKeys);
             return xPlusOneSq;
         }
 
         private Ciphertext XSqPlusOneRelinearization(Ciphertext xEncrypted)
         {
-            RelinKeys relinKeys = keygen.RelinKeys();
+            RelinKeys relinKeys = _keygen.RelinKeys();
 
 
             Ciphertext xSquared = new Ciphertext();
             Ciphertext xSqPlusOne = new Ciphertext();
 
 
-            evaluator.Square(xEncrypted, xSquared);
-            evaluator.RelinearizeInplace(xSquared, relinKeys);
-            evaluator.AddPlain(xSquared, plainOne, xSqPlusOne);
+            _evaluator.Square(xEncrypted, xSquared);
+            _evaluator.RelinearizeInplace(xSquared, relinKeys);
+            _evaluator.AddPlain(xSquared, PlainOne, xSqPlusOne);
             return xSqPlusOne;
         }
 
@@ -246,8 +246,8 @@ namespace SimpleSealTest
             Console.WriteLine("Compute encryptedResult (4(x^2+1)(x+1)^2).");
             Ciphertext encryptedResult = new Ciphertext();
            
-            evaluator.MultiplyPlainInplace(xSqPlusOne, plainFour);
-            evaluator.Multiply(xSqPlusOne, xPlusOneSq, encryptedResult);
+            _evaluator.MultiplyPlainInplace(xSqPlusOne, PlainFour);
+            _evaluator.Multiply(xSqPlusOne, xPlusOneSq, encryptedResult);
             return encryptedResult;
         }
 
@@ -255,8 +255,8 @@ namespace SimpleSealTest
         {
             Console.WriteLine("Compute xPlusOneSq ((x+1)^2).");
             Ciphertext xPlusOneSq = new Ciphertext();
-            evaluator.AddPlain(xEncrypted, plainOne, xPlusOneSq);
-            evaluator.SquareInplace(xPlusOneSq);
+            _evaluator.AddPlain(xEncrypted, PlainOne, xPlusOneSq);
+            _evaluator.SquareInplace(xPlusOneSq);
             return xPlusOneSq;
         }
 
@@ -264,14 +264,14 @@ namespace SimpleSealTest
         {
             Console.WriteLine("Compute xSqPlusOne (x^2+1).");
             Ciphertext xSqPlusOne = new Ciphertext();
-            evaluator.Square(xEncrypted, xSqPlusOne);
+            _evaluator.Square(xEncrypted, xSqPlusOne);
 
            
-            evaluator.AddPlainInplace(xSqPlusOne, plainOne);
+            _evaluator.AddPlainInplace(xSqPlusOne, PlainOne);
             return xSqPlusOne;
         }
 
-        private static SEALContext createContext()
+        private static SEALContext CreateContext()
         {
             EncryptionParameters parms = new EncryptionParameters(SchemeType.BFV);
             ulong polyModulusDegree = 4096;

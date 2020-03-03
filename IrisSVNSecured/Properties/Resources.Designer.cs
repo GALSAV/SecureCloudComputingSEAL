@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace IrisSVNSecured.Properties {
+namespace IrisSVMSecured.Properties {
     using System;
     
     

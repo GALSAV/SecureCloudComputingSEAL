@@ -13,7 +13,7 @@ namespace IrisSVMSecured
     {
         private const bool RunSvc      = false;
         private const bool RunIrisSvc  = false;
-
+        private const string OutputDir = @"C:\Output\";
         public class IrisSecureSvc
         {
             private enum Kernel
@@ -272,7 +272,7 @@ namespace IrisSVMSecured
                 
                 using (System.IO.StreamWriter file =
                     new System.IO.StreamWriter(
-                        $@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\GeneralBatch_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
+                        $@"{OutputDir}IrisGeneralBatch_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
                 )
                 {
                     _firstTime = false;
@@ -341,10 +341,8 @@ namespace IrisSVMSecured
             else
             {
                 List<double[]> rows = new List<double[]>();
-                //var path = @"D:\GAL\Workspace\SecureCloudComputing\svm\com\data\iris.data";
                 var bytes = Properties.Resources.iris;
                 numOfRows = 0;
-                //int numOfColums = 0;
                 Stream stream = new MemoryStream(bytes);
                 using (TextFieldParser csvParser = new TextFieldParser(stream))
                 {
@@ -357,7 +355,6 @@ namespace IrisSVMSecured
                         // Read current line fields, pointer moves to the next line.
                         string[] readFields = csvParser.ReadFields();
                         double[] doubleValues = new double[readFields.Length];
-                        //numOfColums = readFields.Length;
 
                         for (int j = 0; j < 4; j++)
                         {
@@ -397,7 +394,7 @@ namespace IrisSVMSecured
 
             using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(
-                    $@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\GeneralBatch_IrisSecureSVC_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
+                    $@"{OutputDir}IrisGeneralBatch_IrisSecureSVC_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
             )
             {
                 Stopwatch timePredictSum = new Stopwatch();

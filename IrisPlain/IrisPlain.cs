@@ -13,6 +13,7 @@ namespace IrisPlain
 		/*
 		 *  Class for a Plain client of Iris classification
 		 *  The application loads samples from Iris dataset which is stored in the resource of the application
+		 *  or as program arguments.
 		 *  A folder c:\Output must exist in order to properly run this application
 		 */
 

@@ -747,7 +747,7 @@ namespace IrisSVMSecured
 		{
 			using (System.IO.StreamWriter file =
 				new System.IO.StreamWriter(
-					$@"{OutputDir}SVMInputBatch_IrisSecureSVC_MASHROOM_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
+					$@"{OutputDir}SVMInputBatch_SecureSVC_MASHROOM_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
 			)
 			{
 				// Action< SecureSVC , double[] , int > thirdAction = (secureSvc, feature, i) => SinglePredict(secureSvc, feature, i, TODO);

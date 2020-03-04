@@ -11,7 +11,7 @@ namespace IrisSVMSecured
 {
     class IrisGeneralBatchPoly
     {
-
+	    private const string OutputDir = @"C:\Output\";
         public class IrisSecureSvc
         {
             private enum Kernel
@@ -161,7 +161,6 @@ namespace IrisSVMSecured
                         Ciphertext tempCt = new Ciphertext();
                         evaluator.RotateVector(sums[i], k, galoisKeys, tempCt);
                         evaluator.AddInplace(sums[i], tempCt);
-                        //Console.WriteLine("######################   : " +k);
 
                     }
                     
@@ -200,7 +199,6 @@ namespace IrisSVMSecured
                     }
                     PrintScale(kernels[i], "2.5  kernels" + i);
                     var kernel = new Ciphertext(kernels[i]);
-                   // evaluator.AddPlainInplace(kernels[i], coef0Plaintext);
                     for (int d = 0; d < (int)_degree-1; d++)
                     {
 	                    kernel.Scale = kernels[i].Scale;
@@ -318,7 +316,7 @@ namespace IrisSVMSecured
                 
                 using (System.IO.StreamWriter file =
                     new System.IO.StreamWriter(
-                        $@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\GeneralPolyBatch_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
+                        $@"{OutputDir}IrisGeneralPolyBatch_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
                 )
                 {
                     _firstTime = false;
@@ -448,7 +446,7 @@ namespace IrisSVMSecured
 
             using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(
-                    $@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\GeneralPolyBatch_IrisSecureSVC_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
+                    $@"{OutputDir}IrisGeneralPolyBatch_IrisSecureSVC_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
             )
             {
                 Stopwatch timePredictSum = new Stopwatch();

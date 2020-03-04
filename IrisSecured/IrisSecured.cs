@@ -127,6 +127,7 @@ namespace IrisSecured
             
 
             var context = new SEALContext(parms);
+            // Key generation
             KeyGenerator keygen = new KeyGenerator(context);
             var publicKey = keygen.PublicKey;
             var secretKey = keygen.SecretKey;
@@ -147,7 +148,9 @@ namespace IrisSecured
             )
             {
 
-
+				// Only CONCEPT demonstation how to parrallel all the computation on all machine cpu's 
+				// Though the parallel here is done on the client side , in "real life" this parallel mechanism 
+				// Should on the server side
                 if ( IsParallel )
 	            {
 		            int processorCount = Environment.ProcessorCount;
@@ -214,7 +217,6 @@ namespace IrisSecured
 		            {
 			            var result = results[i];
 			            file.WriteLine($"{i} , {result.Estimation} , {result.TotalValue} ");
-                        //file.WriteLine($"SecureSVC estimation {i} is : {result.Estimation} , finalResult = {result.TotalValue}");
 
 		            }
 
@@ -245,12 +247,14 @@ namespace IrisSecured
                 }
                 else
                 {
+					//Initiate Stopwatch for performance measure
 	                Stopwatch innerProductStopwatch = new Stopwatch();
 	                Stopwatch negateStopwatch = new Stopwatch();
 	                Stopwatch degreeStopwatch = new Stopwatch();
 	                Stopwatch serverDecisionStopWatch = new Stopwatch();
 
                     int featureSizeWithSpace = numberOfFeatures;
+                    
                     int batchSize = 200;
                     if (batchSize>1)
                     {
@@ -282,10 +286,10 @@ namespace IrisSecured
 		                encryptor.Encrypt(plaintexts, featuresCiphertexts);
 
                         //Server side start
-		                var cyphetResult = clf.Predict(featuresCiphertexts, true, true, innerProductStopwatch, degreeStopwatch, negateStopwatch, serverDecisionStopWatch);
+		                var cypherResult = clf.Predict(featuresCiphertexts, true, true, innerProductStopwatch, degreeStopwatch, negateStopwatch, serverDecisionStopWatch);
                         // Server side end
 		                Plaintext plainResult = new Plaintext();
-		                decryptor.Decrypt(cyphetResult, plainResult);
+		                decryptor.Decrypt(cypherResult, plainResult);
 		                List<double> result = new List<double>();
 		                encoder.Decode(plainResult, result);
 

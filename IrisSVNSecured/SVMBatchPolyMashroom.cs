@@ -520,13 +520,6 @@ namespace SVM
 				PrintScale(decisionTotal, "decisionTotal");  //Level 3
 				List<double> result = PrintCyprherText(_decryptor, decisionTotal, _encoder, "finalTotal",true);
 				
-				//using (System.IO.StreamWriter file =
-				//	new System.IO.StreamWriter(
-				//		$@"D:\GAL\Workspace\SecureCloudComputing\SEAL_test\SecureCloudComputing\IrisSVNSecured\Output\GeneralPolyBatch_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
-				//)
-				//{
-				//	_firstTime = false;
-				//	file.WriteLine($"{TotalValue[0]}");
                 serverDecisionStopWatch.Stop();
 				//}
                 Console.WriteLine($"client Init elapsed {clientStopwatch.ElapsedMilliseconds} ms");
@@ -657,7 +650,7 @@ namespace SVM
 
             using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(
-                    $@"{OutputDir}SVMBatchPoly_IrisSecureSVC_MASHROOM_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
+                    $@"{OutputDir}SVMBatchPoly_SecureSVC_MASHROOM_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
             )
             {
 

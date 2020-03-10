@@ -8,4 +8,8 @@
     <PackageReference Include="Microsoft.Research.SEALNet" Version="3.4.5" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SVCUtilities\SVCUtilities.csproj" />
+  </ItemGroup>
+
 </Project>

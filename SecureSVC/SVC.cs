@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using SVCUtilities;
 
 namespace SecureSVC
 {
@@ -68,9 +69,7 @@ namespace SecureSVC
         private const double Zero = 1.0E-9;
 
 		// Flags for debug or alggorithm selection purposes
-        private const bool PRINT_SCALE = false;
-        private const bool PrintExactScale = false;
-        private const bool PrintCipherText = false;
+
         private const bool UseBatchInnerProduct = true;
 
 
@@ -173,7 +172,7 @@ namespace SecureSVC
                     }
                     _svPlaintexts[i] = new Plaintext();
                     _encoder.Encode(batchVectors, _scale, _svPlaintexts[i]);
-                    PrintScale(_svPlaintexts[i], "batch supportVectorsPlaintext" + i);
+                    SVCUtilities.SvcUtilities.PrintScale(_svPlaintexts[i], "batch supportVectorsPlaintext" + i);
                     _sums[i] = new Ciphertext();
                 }
             }
@@ -195,7 +194,7 @@ namespace SecureSVC
                         _svPlaintextsArr[i, j] = new Plaintext();
 
                         _encoder.Encode(_vectors[i][j] != 0 ? _vectors[i][j] : Zero, _scale, _svPlaintextsArr[i, j]);
-                        PrintScale(_svPlaintextsArr[i, j], $"supportVectorsPlaintext[{i}][{j}]");
+                        SvcUtilities.PrintScale(_svPlaintextsArr[i, j], $"supportVectorsPlaintext[{i}][{j}]");
                     }
                 }
 
@@ -253,8 +252,8 @@ namespace SecureSVC
 
 
                 innerProductStopwatch.Stop();
-                PrintCyprherText(_decryptor, _kernels[i], _encoder, $"inner product TotalValue {i}");
-                PrintScale(_kernels[i], "0. kernels" + i);
+                SvcUtilities.PrintCyprherText(_decryptor, _kernels[i], _encoder, $"inner product TotalValue {i}");
+                SvcUtilities.PrintScale(_kernels[i], "0. kernels" + i);
                 if (useRelinearizeInplace)
                 {
                     _evaluator.RelinearizeInplace(_kernels[i], _relinKeys);
@@ -265,7 +264,7 @@ namespace SecureSVC
                     _evaluator.RescaleToNextInplace(_kernels[i]);
                 }
 
-                PrintScale(_kernels[i], "1. kernels" + i);
+                SvcUtilities.PrintScale(_kernels[i], "1. kernels" + i);
                 _kernels[i].Scale = _scale;
 
 				//For polynimial kernel calculate 
@@ -282,7 +281,7 @@ namespace SecureSVC
                     }
                     //calculate y * IP
                     _evaluator.MultiplyPlainInplace(_kernels[i], _gamaPlaintext);
-                    PrintScale(_kernels[i], "2. kernels" + i);
+                    SvcUtilities.PrintScale(_kernels[i], "2. kernels" + i);
                     if (useRelinearizeInplace)
                     {
                         _evaluator.RelinearizeInplace(_kernels[i], _relinKeys);
@@ -292,7 +291,7 @@ namespace SecureSVC
                     {
                         _evaluator.RescaleToNextInplace(_kernels[i]);
                     }
-                    PrintScale(_kernels[i], "3.  kernels" + i);
+                    SvcUtilities.PrintScale(_kernels[i], "3.  kernels" + i);
 
 					// add r
                     if (Math.Abs(_coef0) > 0)
@@ -310,7 +309,7 @@ namespace SecureSVC
                         _evaluator.AddPlainInplace(_kernels[i], coef0Plaintext);
                     }
 
-                    PrintScale(_kernels[i], "4.  kernels" + i);
+                    SvcUtilities.PrintScale(_kernels[i], "4.  kernels" + i);
                     degreeStopwatch.Start();
 					// calculate the polynom degree
                     var kernel = new Ciphertext(_kernels[i]);
@@ -324,7 +323,7 @@ namespace SecureSVC
                             _evaluator.ModSwitchToInplace(kernel, lastParmsId);
                         }
                         _evaluator.MultiplyInplace(_kernels[i], kernel);
-                        PrintScale(_kernels[i], d + "  5. kernels" + i);
+                        SvcUtilities.PrintScale(_kernels[i], d + "  5. kernels" + i);
                         if (useRelinearizeInplace)
                         {
                             _evaluator.RelinearizeInplace(_kernels[i], _relinKeys);
@@ -334,9 +333,9 @@ namespace SecureSVC
                         {
                             _evaluator.RescaleToNextInplace(_kernels[i]);
                         }
-                        PrintScale(_kernels[i], d + " rescale  6. kernels" + i);
+                        SvcUtilities.PrintScale(_kernels[i], d + " rescale  6. kernels" + i);
                     }
-                    PrintScale(_kernels[i], "7. kernels" + i);
+                    SvcUtilities.PrintScale(_kernels[i], "7. kernels" + i);
                     degreeStopwatch.Stop();
                 }
 
@@ -345,9 +344,9 @@ namespace SecureSVC
                 _evaluator.NegateInplace(_kernels[i]);
                 negateStopwatch.Stop();
 
-                PrintScale(_kernels[i], "8. kernel" + i);
+                SvcUtilities.PrintScale(_kernels[i], "8. kernel" + i);
 
-                PrintCyprherText(_decryptor, _kernels[i], _encoder, "kernel" + i);
+                SvcUtilities.PrintCyprherText(_decryptor, _kernels[i], _encoder, "kernel" + i);
 
             }
             serverDecisionStopWatch.Start();
@@ -361,7 +360,7 @@ namespace SecureSVC
             for (int i = 0; i < _numOfrowsCount; i++)
             {
                 _encoder.Encode(_coefficients[0][i], scale2, _coefArr[i]);
-                PrintScale(_coefArr[i], "coefPlainText" + i);
+                SvcUtilities.PrintScale(_coefArr[i], "coefPlainText" + i);
             }
 
             if (useReScale)
@@ -386,8 +385,8 @@ namespace SecureSVC
                 {
                     _evaluator.RescaleToNextInplace(_decisionsArr[i]);
                 }
-                PrintScale(_decisionsArr[i], "decision" + i);
-                PrintCyprherText(_decryptor, _decisionsArr[i], _encoder, "decision" + i);
+                SvcUtilities.PrintScale(_decisionsArr[i], "decision" + i);
+                SvcUtilities.PrintCyprherText(_decryptor, _decisionsArr[i], _encoder, "decision" + i);
             }
 
 
@@ -398,8 +397,8 @@ namespace SecureSVC
             _evaluator.AddMany(_decisionsArr, decisionTotal);
             //=================================================================
 
-            PrintScale(decisionTotal, "decisionTotal");
-            PrintCyprherText(_decryptor, decisionTotal, _encoder, "decision total");
+            SvcUtilities.PrintScale(decisionTotal, "decisionTotal");
+            SvcUtilities.PrintCyprherText(_decryptor, decisionTotal, _encoder, "decision total");
 
 
             // Encode intercepts : ParmsId! , scale!
@@ -417,8 +416,8 @@ namespace SecureSVC
                 _evaluator.ModSwitchToInplace(interceptsPlainText, lastParmsId);
             }
 
-            PrintScale(interceptsPlainText, "interceptsPlainText");
-            PrintScale(decisionTotal, "decisionTotal");
+            SvcUtilities.PrintScale(interceptsPlainText, "interceptsPlainText");
+            SvcUtilities.PrintScale(decisionTotal, "decisionTotal");
 
 
             //// Calculate finalTotal
@@ -428,8 +427,8 @@ namespace SecureSVC
             _evaluator.AddPlainInplace(decisionTotal, interceptsPlainText);
             //=================================================================
 
-            PrintScale(decisionTotal, "decisionTotal");  //Level 3
-            List<double> result = PrintCyprherText(_decryptor, decisionTotal, _encoder, "finalTotal", true);
+            SvcUtilities.PrintScale(decisionTotal, "decisionTotal");  //Level 3
+            List<double> result = SvcUtilities.PrintCyprherText(_decryptor, decisionTotal, _encoder, "finalTotal", true);
 
             serverDecisionStopWatch.Stop();
             long innerProductMilliseconds = innerProductStopwatch.ElapsedMilliseconds;
@@ -463,47 +462,8 @@ namespace SecureSVC
             return sum;
         }
 
-		//Function for conditionally printing the scale of the ciphertext for debug 
-        private static void PrintScale(Ciphertext ciphertext, String name)
-        {
-            if (!PRINT_SCALE) return;
-            if (PrintExactScale)
-            {
-                Console.Write($"    + Exact scale of {name}:");
-                Console.WriteLine(" {0:0.0000000000}", ciphertext.Scale);
-            }
 
-            Console.WriteLine("    + Scale of {0}: {1} bits ", name,
-                    Math.Log(ciphertext.Scale, newBase: 2)/*, _decryptor.InvariantNoiseBudget(ciphertext)*/);
-        }
 
-        //Function for conditionally printing the scale of the plaintext for debug 
-        private static void PrintScale(Plaintext plaintext, String name)
-        {
-            if (!PRINT_SCALE) return;
-            if (PrintExactScale)
-            {
-                Console.Write($"    + Exact scale of {name}:");
-                Console.WriteLine(" {0:0.0000000000}", plaintext.Scale);
-            }
-
-            Console.WriteLine("    + Scale of {0}: {1} bits", name,
-                Math.Log(plaintext.Scale, newBase: 2));
-        }
-
-        //Function for printing the cipher text for debug 
-        private static List<double> PrintCyprherText(Decryptor decryptor, Ciphertext ciphertext, CKKSEncoder encoder, String name, bool print = false)
-        {
-            if (!PrintCipherText && !print) return null;
-            if (decryptor == null) return null;
-            Plaintext plainResult = new Plaintext();
-            decryptor.Decrypt(ciphertext, plainResult);
-            List<double> result = new List<double>();
-            encoder.Decode(plainResult, result);
-
-            Console.WriteLine($"{name} TotalValue = {result[0]}");
-            return result;
-        }
 
 
     }

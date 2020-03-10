@@ -6,10 +6,11 @@ using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using SVCUtilities;
 
 namespace IrisSVMSecured
 {
-    class IrisGeneralBatchPoly
+    class IrisPolyBatch
     {
 	    private const string OutputDir = @"C:\Output\";
         public class IrisSecureSvc
@@ -54,7 +55,7 @@ namespace IrisSVMSecured
                 this._degree = degree;
             }
 
-            public int Predict(double[] features,int power, bool useRelinearizeInplace,bool useReScale)
+            public int Predict(double[] features,int power, bool useRelinearizeInplace,bool useReScale, Stopwatch timePredictSum)
             {
                 EncryptionParameters parms = new EncryptionParameters(SchemeType.CKKS);
 
@@ -92,7 +93,7 @@ namespace IrisSVMSecured
                 ulong slotCount = encoder.SlotCount;
                 
                 Console.WriteLine($"Number of slots: {slotCount}");
-
+                timePredictSum.Start();
                 var featuresLength = features.Length;
 
 
@@ -107,8 +108,8 @@ namespace IrisSVMSecured
 
                 encoder.Encode(features, scale, plaintexts);
                 encryptor.Encrypt(plaintexts, featuresCiphertexts);
-                PrintScale(plaintexts, "featurePlaintext");
-                PrintScale(featuresCiphertexts, "featurefEncrypted");
+                SvcUtilities.PrintScale(plaintexts, "featurePlaintext");
+                SvcUtilities.PrintScale(featuresCiphertexts, "featurefEncrypted");
 
                 // Handle SV
                 var numOfrows    = _vectors.Length;
@@ -123,7 +124,7 @@ namespace IrisSVMSecured
                     //{
                         svPlaintexts[i] = new Plaintext();
                         encoder.Encode(_vectors[i], scale, svPlaintexts[i]);
-                        PrintScale(svPlaintexts[i], "supportVectorsPlaintext"+i);
+                        SvcUtilities.PrintScale(svPlaintexts[i], "supportVectorsPlaintext"+i);
                     //}
                 }
                 // Prepare sum of inner product
@@ -165,9 +166,9 @@ namespace IrisSVMSecured
                     }
                     
 					kernels[i] = sums[i];
-					PrintCyprherText(decryptor, kernels[i], encoder, "@@@@   kernel" + i);
+					SvcUtilities.PrintCyprherText(decryptor, kernels[i], encoder, "@@@@   kernel" + i);
 
-                    PrintScale(kernels[i], "0. kernels" + i);
+                    SvcUtilities.PrintScale(kernels[i], "0. kernels" + i);
                     if (useRelinearizeInplace)
                     {
                         evaluator.RelinearizeInplace(kernels[i], relinKeys);
@@ -178,7 +179,7 @@ namespace IrisSVMSecured
                         evaluator.RescaleToNextInplace(kernels[i]);
                     }
 
-                    PrintScale(kernels[i], "1. kernels" + i);
+                    SvcUtilities.PrintScale(kernels[i], "1. kernels" + i);
                     //kernels[i].Scale = scale;
                     if (useReScale)
                     {
@@ -186,8 +187,8 @@ namespace IrisSVMSecured
                             evaluator.ModSwitchToInplace(gamaPlaintext, lastParmsId);
                     }
                     evaluator.MultiplyPlainInplace(kernels[i], gamaPlaintext);
-                    PrintCyprherText(decryptor, kernels[i], encoder, "!!!!!!   kernel" + i);
-                    PrintScale(kernels[i], "2. kernels" + i);
+                    SvcUtilities.PrintCyprherText(decryptor, kernels[i], encoder, "!!!!!!   kernel" + i);
+                    SvcUtilities.PrintScale(kernels[i], "2. kernels" + i);
                     if (useRelinearizeInplace)
                     {
                         evaluator.RelinearizeInplace(kernels[i], relinKeys);
@@ -197,7 +198,7 @@ namespace IrisSVMSecured
                     {
                         evaluator.RescaleToNextInplace(kernels[i]);
                     }
-                    PrintScale(kernels[i], "2.5  kernels" + i);
+                    SvcUtilities.PrintScale(kernels[i], "2.5  kernels" + i);
                     var kernel = new Ciphertext(kernels[i]);
                     for (int d = 0; d < (int)_degree-1; d++)
                     {
@@ -208,7 +209,7 @@ namespace IrisSVMSecured
 		                    evaluator.ModSwitchToInplace(kernel, lastParmsId);
 	                    }
                         evaluator.MultiplyInplace(kernels[i], kernel);
-                        PrintScale(kernels[i], d+"  3. kernels" + i);
+                        SvcUtilities.PrintScale(kernels[i], d+"  3. kernels" + i);
                         if (useRelinearizeInplace)
                         {
                             evaluator.RelinearizeInplace(kernels[i], relinKeys);
@@ -218,17 +219,17 @@ namespace IrisSVMSecured
                         {
                             evaluator.RescaleToNextInplace(kernels[i]);
                         }
-                        PrintScale(kernels[i], d + " rescale  3. kernels" + i);
+                        SvcUtilities.PrintScale(kernels[i], d + " rescale  3. kernels" + i);
                     }
-                    PrintScale(kernels[i], "4. kernels" + i);
+                    SvcUtilities.PrintScale(kernels[i], "4. kernels" + i);
 
 
                     evaluator.NegateInplace(kernels[i]);
 
 
-                    PrintScale(kernels[i], "5. kernel"+i); 
+                    SvcUtilities.PrintScale(kernels[i], "5. kernel"+i); 
 
-                    PrintCyprherText(decryptor, kernels[i], encoder, "kernel"+i);
+                    SvcUtilities.PrintCyprherText(decryptor, kernels[i], encoder, "kernel"+i);
 
                 }
 
@@ -242,7 +243,7 @@ namespace IrisSVMSecured
                 for (int i = 0; i < numOfrows; i++)
                 {
                     encoder.Encode(_coefficients[0][i], scale2, coefArr[i]);
-                    PrintScale(coefArr[i], "coefPlainText+i");
+                    SvcUtilities.PrintScale(coefArr[i], "coefPlainText+i");
                 }
 
 
@@ -269,8 +270,8 @@ namespace IrisSVMSecured
                     {
                         evaluator.RescaleToNextInplace(decisionsArr[i]);
                     }
-                    PrintScale(decisionsArr[i], "decision"+i);
-                    PrintCyprherText(decryptor, decisionsArr[i], encoder, "decision" + i);
+                    SvcUtilities.PrintScale(decisionsArr[i], "decision"+i);
+                    SvcUtilities.PrintCyprherText(decryptor, decisionsArr[i], encoder, "decision" + i);
                 }
 
 
@@ -281,8 +282,8 @@ namespace IrisSVMSecured
                 evaluator.AddMany(decisionsArr, decisionTotal);
                 //=================================================================
               
-                PrintScale(decisionTotal, "decisionTotal"); 
-                PrintCyprherText(decryptor, decisionTotal, encoder, "decision total");
+                SvcUtilities.PrintScale(decisionTotal, "decisionTotal"); 
+                SvcUtilities.PrintCyprherText(decryptor, decisionTotal, encoder, "decision total");
 
 
                 // Encode intercepts : ParmsId! , scale!
@@ -300,8 +301,8 @@ namespace IrisSVMSecured
                     evaluator.ModSwitchToInplace(interceptsPlainText, lastParmsId);
                 }
 
-                PrintScale(interceptsPlainText, "interceptsPlainText");
-                PrintScale(decisionTotal, "decisionTotal");
+                SvcUtilities.PrintScale(interceptsPlainText, "interceptsPlainText");
+                SvcUtilities.PrintScale(decisionTotal, "decisionTotal");
 
 
                 //// Calculate finalTotal
@@ -310,13 +311,13 @@ namespace IrisSVMSecured
                 //=================================================================
                 evaluator.AddPlainInplace(decisionTotal, interceptsPlainText);
                 //=================================================================
-
-                PrintScale(decisionTotal, "decisionTotal");  //Level 3
-                List<double> result = PrintCyprherText(decryptor, decisionTotal, encoder, "finalTotal");
+                timePredictSum.Stop();
+                SvcUtilities.PrintScale(decisionTotal, "decisionTotal");  //Level 3
+                List<double> result = SvcUtilities.PrintCyprherText(decryptor, decisionTotal, encoder, "finalTotal");
                 
                 using (System.IO.StreamWriter file =
                     new System.IO.StreamWriter(
-                        $@"{OutputDir}IrisGeneralPolyBatch_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
+                        $@"{OutputDir}IrisPolyBatch_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
                 )
                 {
                     _firstTime = false;
@@ -331,35 +332,6 @@ namespace IrisSVMSecured
                 return 1;
 
             }
-
-            private static void PrintScale(Ciphertext ciphertext,String name)
-            {
-                Console.Write($"    + Exact scale of {name}:");
-                Console.WriteLine(" {0:0.0000000000}", ciphertext.Scale);
-                Console.WriteLine("    + Scale of {0}: {1} bits ", name,
-                    Math.Log(ciphertext.Scale, newBase: 2)/*, _decryptor.InvariantNoiseBudget(ciphertext)*/);
-            }
-
-            private static void PrintScale(Plaintext plaintext, String name)
-            {
-                Console.Write($"    + Exact scale of {name}:");
-                Console.WriteLine(" {0:0.0000000000}", plaintext.Scale);
-                Console.WriteLine("    + Scale of {0}: {1} bits", name,
-                    Math.Log(plaintext.Scale, newBase: 2));
-            }
-
-            private static List<double> PrintCyprherText(Decryptor decryptor, Ciphertext ciphertext, CKKSEncoder encoder,String name)
-            {
-                Plaintext plainResult = new Plaintext();
-                decryptor.Decrypt(ciphertext, plainResult);
-                List<double> result = new List<double>();
-                encoder.Decode(plainResult, result);
-
-                Console.WriteLine($"{name} TotalValue = {result[0]}");
-                return result;
-            }
-
-
         }
 
 
@@ -446,7 +418,7 @@ namespace IrisSVMSecured
 
             using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(
-                    $@"{OutputDir}IrisGeneralPolyBatch_IrisSecureSVC_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
+                    $@"{OutputDir}IrisPolyBatch_IrisSecureSVC_classification_result_{scale}_{useRelinearizeInplace}_{useReScale}.txt")
             )
             {
                 Stopwatch timePredictSum = new Stopwatch();
@@ -454,9 +426,7 @@ namespace IrisSVMSecured
                 {
                     Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
 
-                    timePredictSum.Start();
-                    int estimation = clf3.Predict(features[i],scale,useRelinearizeInplace,useReScale);
-                    timePredictSum.Stop();
+                    int estimation = clf3.Predict(features[i],scale,useRelinearizeInplace,useReScale, timePredictSum);
                     file.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
                     Console.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
                     Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");

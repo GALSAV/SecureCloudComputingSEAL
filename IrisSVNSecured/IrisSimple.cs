@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.IO;
+using SVCUtilities;
 
 namespace IrisSVMSecured
 {
@@ -55,7 +56,7 @@ namespace IrisSVMSecured
                 this._degree = degree;
             }
 
-            public int Predict(double[] features,int power, bool useRelinearizeInplace,bool useReScale)
+            public int Predict(double[] features,int power, bool useRelinearizeInplace,bool useReScale, Stopwatch timePredictSum)
             {
                 EncryptionParameters parms = new EncryptionParameters(SchemeType.CKKS);
                 if (power < 60)
@@ -91,7 +92,7 @@ namespace IrisSVMSecured
                 
                 Console.WriteLine($"Number of slots: {slotCount}");
 
-
+                timePredictSum.Start();
                 Plaintext fPlaintext0 = new Plaintext();
                 Plaintext fPlaintext1 = new Plaintext();
                 Plaintext fPlaintext2 = new Plaintext();
@@ -104,9 +105,9 @@ namespace IrisSVMSecured
                 encoder.Encode(features[3], scale, fPlaintext3);
 
 
-                PrintScale(fPlaintext0, "fPlaintext0");
-                PrintScale(fPlaintext1, "fPlaintext1");
-                PrintScale(fPlaintext2, "fPlaintext2");
+                SvcUtilities.PrintScale(fPlaintext0, "fPlaintext0");
+                SvcUtilities.PrintScale(fPlaintext1, "fPlaintext1");
+                SvcUtilities.PrintScale(fPlaintext2, "fPlaintext2");
 
                 Ciphertext f0Encrypted = new Ciphertext();
                 Ciphertext f1Encrypted = new Ciphertext();
@@ -117,9 +118,9 @@ namespace IrisSVMSecured
                 encryptor.Encrypt(fPlaintext2, f2Encrypted);
                 encryptor.Encrypt(fPlaintext3, f3Encrypted);
 
-                PrintScale(f0Encrypted, "f0Encrypted");
-                PrintScale(f1Encrypted, "f1Encrypted");
-                PrintScale(f2Encrypted, "f2Encrypted");
+                SvcUtilities.PrintScale(f0Encrypted, "f0Encrypted");
+                SvcUtilities.PrintScale(f1Encrypted, "f1Encrypted");
+                SvcUtilities.PrintScale(f2Encrypted, "f2Encrypted");
 
                 Plaintext v00Plaintext1 = new Plaintext();
                 Plaintext v01Plaintext1 = new Plaintext();
@@ -150,20 +151,20 @@ namespace IrisSVMSecured
                 encoder.Encode(_vectors[2][3], scale, v23Plaintext1);
 
 
-                PrintScale(v00Plaintext1, "v00Plaintext1");
-                PrintScale(v01Plaintext1, "v01Plaintext1");
-                PrintScale(v02Plaintext1, "v02Plaintext1");
-                PrintScale(v03Plaintext1, "v03Plaintext1");
+                SvcUtilities.PrintScale(v00Plaintext1, "v00Plaintext1");
+                SvcUtilities.PrintScale(v01Plaintext1, "v01Plaintext1");
+                SvcUtilities.PrintScale(v02Plaintext1, "v02Plaintext1");
+                SvcUtilities.PrintScale(v03Plaintext1, "v03Plaintext1");
 
-                PrintScale(v10Plaintext1, "v10Plaintext1");
-                PrintScale(v11Plaintext1, "v11Plaintext1");
-                PrintScale(v12Plaintext1, "v12Plaintext1");
-                PrintScale(v13Plaintext1, "v13Plaintext1");
+                SvcUtilities.PrintScale(v10Plaintext1, "v10Plaintext1");
+                SvcUtilities.PrintScale(v11Plaintext1, "v11Plaintext1");
+                SvcUtilities.PrintScale(v12Plaintext1, "v12Plaintext1");
+                SvcUtilities.PrintScale(v13Plaintext1, "v13Plaintext1");
 
-                PrintScale(v20Plaintext1, "v20Plaintext1");
-                PrintScale(v21Plaintext1, "v21Plaintext1");
-                PrintScale(v22Plaintext1, "v22Plaintext1");
-                PrintScale(v23Plaintext1, "v23Plaintext1");
+                SvcUtilities.PrintScale(v20Plaintext1, "v20Plaintext1");
+                SvcUtilities.PrintScale(v21Plaintext1, "v21Plaintext1");
+                SvcUtilities.PrintScale(v22Plaintext1, "v22Plaintext1");
+                SvcUtilities.PrintScale(v23Plaintext1, "v23Plaintext1");
 
                 Plaintext coef00PlainText = new Plaintext();
                 Plaintext coef01PlainText = new Plaintext();
@@ -203,10 +204,10 @@ namespace IrisSVMSecured
                 }
 
 
-                PrintScale(tSum1, "tSum1"); //Level 2
-                PrintScale(tSum2, "tSum2"); //Level 2
-                PrintScale(tSum3, "tSum3"); //Level 2
-                PrintScale(tSum4, "tSum4"); //Level 2
+                SvcUtilities.PrintScale(tSum1, "tSum1"); //Level 2
+                SvcUtilities.PrintScale(tSum2, "tSum2"); //Level 2
+                SvcUtilities.PrintScale(tSum3, "tSum3"); //Level 2
+                SvcUtilities.PrintScale(tSum4, "tSum4"); //Level 2
 
                 var ciphertexts1 = new List<Ciphertext>();
                 ciphertexts1.Add(tSum1);
@@ -217,9 +218,9 @@ namespace IrisSVMSecured
                 //=================================================================
                 evaluator.AddMany(ciphertexts1, kernel0); //Level 2
                 //=================================================================
-                PrintScale(kernel0, "kernel0"); //Level 2
+                SvcUtilities.PrintScale(kernel0, "kernel0"); //Level 2
 
-                PrintCyprherText(decryptor, kernel0, encoder,"kernel0");
+                SvcUtilities.PrintCyprherText(decryptor, kernel0, encoder,"kernel0");
 
                 Ciphertext kernel1 = new Ciphertext();
                 //Level 1-> 2
@@ -255,10 +256,10 @@ namespace IrisSVMSecured
 
 
                 Console.WriteLine("Second time : ");
-                PrintScale(tSum1, "tSum1"); //Level 2
-                PrintScale(tSum2, "tSum2"); //Level 2
-                PrintScale(tSum3, "tSum3"); //Level 2
-                PrintScale(tSum4, "tSum4"); //Level 2
+                SvcUtilities.PrintScale(tSum1, "tSum1"); //Level 2
+                SvcUtilities.PrintScale(tSum2, "tSum2"); //Level 2
+                SvcUtilities.PrintScale(tSum3, "tSum3"); //Level 2
+                SvcUtilities.PrintScale(tSum4, "tSum4"); //Level 2
 
                 var ciphertexts2 = new List<Ciphertext>();
                 ciphertexts2.Add(tSum1);
@@ -270,8 +271,8 @@ namespace IrisSVMSecured
                 //=================================================================
                 evaluator.AddMany(ciphertexts2, kernel1); // Level 2
                 //=================================================================
-                PrintScale(kernel1, "kernel1");
-                PrintCyprherText(decryptor, kernel1, encoder, "kernel1");
+                SvcUtilities.PrintScale(kernel1, "kernel1");
+                SvcUtilities.PrintCyprherText(decryptor, kernel1, encoder, "kernel1");
 
                 Ciphertext kernel2 = new Ciphertext();
 
@@ -310,25 +311,25 @@ namespace IrisSVMSecured
                 ciphertexts3.Add(tSum4);
 
                 Console.WriteLine("Third time : ");
-                PrintScale(tSum1, "tSum1"); //Level 2
-                PrintScale(tSum2, "tSum2"); //Level 2
-                PrintScale(tSum3, "tSum3"); //Level 2
-                PrintScale(tSum4, "tSum4"); //Level 2
+                SvcUtilities.PrintScale(tSum1, "tSum1"); //Level 2
+                SvcUtilities.PrintScale(tSum2, "tSum2"); //Level 2
+                SvcUtilities.PrintScale(tSum3, "tSum3"); //Level 2
+                SvcUtilities.PrintScale(tSum4, "tSum4"); //Level 2
 
                 //=================================================================
                 evaluator.AddMany(ciphertexts3, kernel2);
                 //=================================================================
-                PrintScale(kernel2, "kernel2"); //Level 2
+                SvcUtilities.PrintScale(kernel2, "kernel2"); //Level 2
                 
-                PrintCyprherText(decryptor, kernel2, encoder, "kernel2");
+                SvcUtilities.PrintCyprherText(decryptor, kernel2, encoder, "kernel2");
 
                 Ciphertext decision1 = new Ciphertext();
                 Ciphertext decision2 = new Ciphertext();
                 Ciphertext decision3 = new Ciphertext();
 
-                PrintScale(decision1, "decision1"); //Level 0
-                PrintScale(decision2, "decision2"); //Level 0
-                PrintScale(decision3, "decision3"); //Level 0
+                SvcUtilities.PrintScale(decision1, "decision1"); //Level 0
+                SvcUtilities.PrintScale(decision2, "decision2"); //Level 0
+                SvcUtilities.PrintScale(decision3, "decision3"); //Level 0
 
 
                 Ciphertext nKernel0 = new Ciphertext();
@@ -356,9 +357,9 @@ namespace IrisSVMSecured
                 encoder.Encode(_coefficients[0][1], scale2, coef01PlainText);
                 encoder.Encode(_coefficients[0][2], scale2, coef02PlainText);
 
-                PrintScale(coef00PlainText, "coef00PlainText");
-                PrintScale(coef01PlainText, "coef01PlainText");
-                PrintScale(coef02PlainText, "coef02PlainText");
+                SvcUtilities.PrintScale(coef00PlainText, "coef00PlainText");
+                SvcUtilities.PrintScale(coef01PlainText, "coef01PlainText");
+                SvcUtilities.PrintScale(coef02PlainText, "coef02PlainText");
 
 
 
@@ -375,9 +376,9 @@ namespace IrisSVMSecured
                     evaluator.ModSwitchToInplace(coef02PlainText, lastParmsId);
                 }
 
-                PrintScale(nKernel0,  "nKernel0");   //Level 2
-                PrintScale(nKernel1, "nKernel1");   //Level 2
-                PrintScale(nKernel2,  "nKernel2");   //Level 2
+                SvcUtilities.PrintScale(nKernel0,  "nKernel0");   //Level 2
+                SvcUtilities.PrintScale(nKernel1, "nKernel1");   //Level 2
+                SvcUtilities.PrintScale(nKernel2,  "nKernel2");   //Level 2
 
                 //Level 2->3
                 //=================================================================
@@ -410,12 +411,12 @@ namespace IrisSVMSecured
                 }
 
 
-                PrintScale(decision1, "decision1"); //Level 3
-                PrintScale(decision2, "decision2"); //Level 3
-                PrintScale(decision3, "decision3"); //Level 3
-                PrintCyprherText(decryptor, decision1, encoder, "decision1");
-                PrintCyprherText(decryptor, decision2, encoder, "decision2");
-                PrintCyprherText(decryptor, decision3, encoder, "decision3");
+                SvcUtilities.PrintScale(decision1, "decision1"); //Level 3
+                SvcUtilities.PrintScale(decision2, "decision2"); //Level 3
+                SvcUtilities.PrintScale(decision3, "decision3"); //Level 3
+                SvcUtilities.PrintCyprherText(decryptor, decision1, encoder, "decision1");
+                SvcUtilities.PrintCyprherText(decryptor, decision2, encoder, "decision2");
+                SvcUtilities.PrintCyprherText(decryptor, decision3, encoder, "decision3");
 
                 //=================================================================
                 //evaluator.RelinearizeInplace(decision1,keygen.RelinKeys());
@@ -436,8 +437,8 @@ namespace IrisSVMSecured
                 //=================================================================
                 evaluator.AddMany(decisions, decisionTotal);
                 //=================================================================
-                PrintScale(decisionTotal, "decisionTotal"); 
-                PrintCyprherText(decryptor, decisionTotal, encoder, "decision total");
+                SvcUtilities.PrintScale(decisionTotal, "decisionTotal"); 
+                SvcUtilities.PrintCyprherText(decryptor, decisionTotal, encoder, "decision total");
 
 
                 Ciphertext finalTotal = new Ciphertext();
@@ -456,15 +457,15 @@ namespace IrisSVMSecured
                     evaluator.ModSwitchToInplace(interceptsPlainText, lastParmsId);
                 }
 
-                PrintScale(interceptsPlainText, "interceptsPlainText");
-                PrintScale(decisionTotal, "decisionTotal");
+                SvcUtilities.PrintScale(interceptsPlainText, "interceptsPlainText");
+                SvcUtilities.PrintScale(decisionTotal, "decisionTotal");
 
                 //=================================================================
                 evaluator.AddPlainInplace(decisionTotal, interceptsPlainText);
                 //=================================================================
-
-                PrintScale(decisionTotal, "decisionTotal");  //Level 3
-                List<double> result = PrintCyprherText(decryptor, decisionTotal, encoder, "finalTotal");
+                timePredictSum.Stop();
+                SvcUtilities.PrintScale(decisionTotal, "decisionTotal");  //Level 3
+                List<double> result = SvcUtilities.PrintCyprherText(decryptor, decisionTotal, encoder, "finalTotal");
                 using (System.IO.StreamWriter file =
                     new System.IO.StreamWriter(
                         $@"{OutputDir}IrisSimple_IrisSecureSVC_total_{power}_{useRelinearizeInplace}_{useReScale}.txt", !_firstTime)
@@ -482,34 +483,6 @@ namespace IrisSVMSecured
                 return 1;
 
             }
-
-            private static void PrintScale(Ciphertext ciphertext,String name)
-            {
-                Console.Write($"    + Exact scale of {name}:");
-                Console.WriteLine(" {0:0.0000000000}", ciphertext.Scale);
-                Console.WriteLine("    + Scale of {0}: {1} bits ", name,
-                    Math.Log(ciphertext.Scale, newBase: 2)/*, _decryptor.InvariantNoiseBudget(ciphertext)*/);
-            }
-
-            private static void PrintScale(Plaintext plaintext, String name)
-            {
-                Console.Write($"    + Exact scale of {name}:");
-                Console.WriteLine(" {0:0.0000000000}", plaintext.Scale);
-                Console.WriteLine("    + Scale of {0}: {1} bits", name,
-                    Math.Log(plaintext.Scale, newBase: 2));
-            }
-
-            private static List<double> PrintCyprherText(Decryptor decryptor, Ciphertext ciphertext, CKKSEncoder encoder,String name)
-            {
-                Plaintext plainResult = new Plaintext();
-                decryptor.Decrypt(ciphertext, plainResult);
-                List<double> result = new List<double>();
-                encoder.Decode(plainResult, result);
-
-                Console.WriteLine($"{name} TotalValue = {result[0]}");
-                return result;
-            }
-
 
         }
 
@@ -600,9 +573,9 @@ namespace IrisSVMSecured
                 {
                     Console.WriteLine($"\n\n $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
 
-                    timePredictSum.Start();
-                    int estimation = clf3.Predict(features[i],scale,useRelinearizeInplace,useReScale);
-                    timePredictSum.Stop();
+                    //timePredictSum.Start();
+                    int estimation = clf3.Predict(features[i],scale,useRelinearizeInplace,useReScale, timePredictSum);
+                    //timePredictSum.Stop();
                     file.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
                     Console.WriteLine($"IrisSecureSVC estimation{i} is : {estimation} ");
                     Console.WriteLine($"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ \n\n");

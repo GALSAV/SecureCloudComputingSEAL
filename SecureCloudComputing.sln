@@ -4,10 +4,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29509.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IrisSVMSecured", "IrisSVNSecured\IrisSVMSecured.csproj", "{BAA69801-01B6-4499-A2DD-FEAACE8A6A3F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{92158F33-65F0-41E1-A804-C59DD51F9E11} = {92158F33-65F0-41E1-A804-C59DD51F9E11}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlainSVC", "PlainSVC\PlainSVC.csproj", "{AC419C58-BE90-4CE5-A7B7-AE6530500105}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SecureSVC", "SecureSVC\SecureSVC.csproj", "{C0BD6D7B-AC1C-4D4D-9741-0BEF5929B1AB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{92158F33-65F0-41E1-A804-C59DD51F9E11} = {92158F33-65F0-41E1-A804-C59DD51F9E11}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IrisPlain", "IrisPlain\IrisPlain.csproj", "{C8F7BA6C-47AD-4AB5-B435-737741F48A20}"
 	ProjectSection(ProjectDependencies) = postProject

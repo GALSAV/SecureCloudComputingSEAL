@@ -8,7 +8,7 @@ using System.IO;
 
 namespace IrisPlain
 {
-    class IrisPlain
+    class IrisPolyPlain
     {
 		/*
 		 *  Class for a Plain client of Iris classification
@@ -56,12 +56,12 @@ namespace IrisPlain
             double[][] vectors = new double[3][];
 
             vectors[0] = new[] { 5.1, 3.3, 1.7, 0.5 };
-            vectors[1] = new[] { 4.8, 3.4, 1.9, 0.2 };
+            vectors[1] = new[] { 4.5, 2.3, 1.3, 0.3 };
             vectors[2] = new[] { 5.1, 2.5, 3.0, 1.1 };
 
             double[][] coefficients = new double[1][];
-            coefficients[0] = new double[] { -0.7407784813992192, -0.0025023664254470897, 0.7432808478246663 };
-            double[] intercepts = { 0.9055182807973224 };
+            coefficients[0] = new double[] { -0.008885899026071108, -0.0005100630977269122, 0.009395962123798021 };
+            double[] intercepts = { 1.1358388232934824 };
             int[] weights = { 2, 1 };
 
             Console.WriteLine("SVC : ");
@@ -69,7 +69,7 @@ namespace IrisPlain
             Svc clf = new Svc(2, 2, vectors, coefficients, intercepts, weights, "Linear", 0.25, 0.0, 3);
             using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(
-                   $@"{OutputDir}IrisPlain_{DateTime.Now.Day}_{DateTime.Now.ToShortTimeString().ToString().Replace(":","_")}.txt")
+                   $@"{OutputDir}IrisPolyPlain_{DateTime.Now.Day}_{DateTime.Now.ToShortTimeString().ToString().Replace(":","_")}.txt")
             )
             {
                 Stopwatch totalTime = new Stopwatch();

@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading.Channels;
+using SVCUtilities;
 
 namespace IrisSVMSecured
 {
@@ -51,9 +52,6 @@ namespace IrisSVMSecured
 
 			//private static bool _firstTime = true;
 
-			private const bool PRINT_SCALE = false;
-            private const bool PrintExactScale = false;
-            private const bool PrintCipherText = false;
             //private static Decryptor _decryptor;
 
             public SecureSvc(int nRows, double[][] vectors, double[][] coefficients, double[] intercepts,
@@ -130,8 +128,8 @@ namespace IrisSVMSecured
                 double scale = Math.Pow(2.0, _power);
 				_encoder.Encode(features, scale, plaintexts);
 				_encryptor.Encrypt(plaintexts, featuresCiphertexts);
-				PrintScale(plaintexts, "featurePlaintext");
-				PrintScale(featuresCiphertexts, "featurefEncrypted");
+				SvcUtilities.PrintScale(plaintexts, "featurePlaintext");
+				SvcUtilities.PrintScale(featuresCiphertexts, "featurefEncrypted");
 				clientStopwatch.Stop();
 
 
@@ -151,7 +149,7 @@ namespace IrisSVMSecured
 				{
 						svPlaintexts[i] = new Plaintext();
 						_encoder.Encode(_vectors[i], scale, svPlaintexts[i]);
-						PrintScale(svPlaintexts[i], "supportVectorsPlaintext"+i);
+						SvcUtilities.PrintScale(svPlaintexts[i], "supportVectorsPlaintext"+i);
 						sums[i] = new Ciphertext();
                 }
 
@@ -197,8 +195,8 @@ namespace IrisSVMSecured
                     innerProductStopwatch.Stop();
                     kernels[i] = sums[i];
 
-                    PrintCyprherText(_decryptor, kernels[i], _encoder, $"inner product TotalValue {i}" );
-                    PrintScale(kernels[i], "0. kernels" + i);
+                    SvcUtilities.PrintCyprherText(_decryptor, kernels[i], _encoder, $"inner product TotalValue {i}" );
+                    SvcUtilities.PrintScale(kernels[i], "0. kernels" + i);
                     if (useRelinearizeInplace)
                     {
                         _evaluator.RelinearizeInplace(kernels[i], _relinKeys);
@@ -209,7 +207,7 @@ namespace IrisSVMSecured
                         _evaluator.RescaleToNextInplace(kernels[i]);
                     }
 
-                    PrintScale(kernels[i], "1. kernels" + i);
+                    SvcUtilities.PrintScale(kernels[i], "1. kernels" + i);
                     kernels[i].Scale = scale;
 
 
@@ -222,7 +220,7 @@ namespace IrisSVMSecured
 							_evaluator.ModSwitchToInplace(gamaPlaintext, lastParmsId);
 						}
 						_evaluator.MultiplyPlainInplace(kernels[i], gamaPlaintext);
-						PrintScale(kernels[i], "2. kernels" + i);
+						SvcUtilities.PrintScale(kernels[i], "2. kernels" + i);
 						if (useRelinearizeInplace)
 						{
 							_evaluator.RelinearizeInplace(kernels[i], _relinKeys);
@@ -232,7 +230,7 @@ namespace IrisSVMSecured
 						{
 							_evaluator.RescaleToNextInplace(kernels[i]);
 						}
-						PrintScale(kernels[i], "3.  kernels" + i);
+						SvcUtilities.PrintScale(kernels[i], "3.  kernels" + i);
 
 						if (Math.Abs(_coef0) > 0)
 						{
@@ -249,7 +247,7 @@ namespace IrisSVMSecured
 							_evaluator.AddPlainInplace(kernels[i], coef0Plaintext);
                         }
 
-                        PrintScale(kernels[i], "4.  kernels" + i);
+                        SvcUtilities.PrintScale(kernels[i], "4.  kernels" + i);
 
                        
 
@@ -266,7 +264,7 @@ namespace IrisSVMSecured
 								_evaluator.ModSwitchToInplace(kernel, lastParmsId);
 							}
                             _evaluator.MultiplyInplace(kernels[i], kernel);
-							PrintScale(kernels[i], d + "  5. kernels" + i);
+							SvcUtilities.PrintScale(kernels[i], d + "  5. kernels" + i);
 							if (useRelinearizeInplace)
 							{
 								_evaluator.RelinearizeInplace(kernels[i], _relinKeys);
@@ -276,9 +274,9 @@ namespace IrisSVMSecured
 							{
 								_evaluator.RescaleToNextInplace(kernels[i]);
 							}
-							PrintScale(kernels[i], d + " rescale  6. kernels" + i);
+							SvcUtilities.PrintScale(kernels[i], d + " rescale  6. kernels" + i);
 						}
-						PrintScale(kernels[i], "7. kernels" + i);
+						SvcUtilities.PrintScale(kernels[i], "7. kernels" + i);
 
 						degreeStopwatch.Stop();
                     }
@@ -291,9 +289,9 @@ namespace IrisSVMSecured
                     _evaluator.NegateInplace(kernels[i]);
                     negateStopwatch.Stop();
 
-                    PrintScale(kernels[i], "8. kernel"+i); 
+                    SvcUtilities.PrintScale(kernels[i], "8. kernel"+i); 
 
-					PrintCyprherText(_decryptor, kernels[i], _encoder, "kernel"+i);
+					SvcUtilities.PrintCyprherText(_decryptor, kernels[i], _encoder, "kernel"+i);
 
 				}
 
@@ -312,7 +310,7 @@ namespace IrisSVMSecured
 				for (int i = 0; i < numOfrowsCount; i++)
 				{
 					_encoder.Encode(_coefficients[0][i], scale2, coefArr[i]);
-					PrintScale(coefArr[i], "coefPlainText"+i);
+					SvcUtilities.PrintScale(coefArr[i], "coefPlainText"+i);
 				}
 
 
@@ -339,8 +337,8 @@ namespace IrisSVMSecured
 					{
 						_evaluator.RescaleToNextInplace(decisionsArr[i]);
 					}
-					PrintScale(decisionsArr[i], "decision"+i);
-					PrintCyprherText(_decryptor, decisionsArr[i], _encoder, "decision" + i);
+					SvcUtilities.PrintScale(decisionsArr[i], "decision"+i);
+					SvcUtilities.PrintCyprherText(_decryptor, decisionsArr[i], _encoder, "decision" + i);
 				}
 
 
@@ -351,8 +349,8 @@ namespace IrisSVMSecured
 				_evaluator.AddMany(decisionsArr, decisionTotal);
 				//=================================================================
 			  
-				PrintScale(decisionTotal, "decisionTotal"); 
-				PrintCyprherText(_decryptor, decisionTotal, _encoder, "decision total");
+				SvcUtilities.PrintScale(decisionTotal, "decisionTotal"); 
+				SvcUtilities.PrintCyprherText(_decryptor, decisionTotal, _encoder, "decision total");
 
 
 				// Encode intercepts : ParmsId! , scale!
@@ -370,8 +368,8 @@ namespace IrisSVMSecured
 					_evaluator.ModSwitchToInplace(interceptsPlainText, lastParmsId);
 				}
 
-				PrintScale(interceptsPlainText, "interceptsPlainText");
-				PrintScale(decisionTotal, "decisionTotal");
+				SvcUtilities.PrintScale(interceptsPlainText, "interceptsPlainText");
+				SvcUtilities.PrintScale(decisionTotal, "decisionTotal");
 
 
 				//// Calculate finalTotal
@@ -381,8 +379,8 @@ namespace IrisSVMSecured
 				_evaluator.AddPlainInplace(decisionTotal, interceptsPlainText);
 				//=================================================================
 
-				PrintScale(decisionTotal, "decisionTotal");  //Level 3
-				List<double> result = PrintCyprherText(_decryptor, decisionTotal, _encoder, "finalTotal",true);
+				SvcUtilities.PrintScale(decisionTotal, "decisionTotal");  //Level 3
+				List<double> result = SvcUtilities.PrintCyprherText(_decryptor, decisionTotal, _encoder, "finalTotal",true);
 
                 serverDecisionStopWatch.Stop();
 
@@ -403,43 +401,6 @@ namespace IrisSVMSecured
 
 				return 1;
 
-			}
-
-			private static void PrintScale(Ciphertext ciphertext, String name)
-			{
-				if (!PRINT_SCALE) return;
-				if (PrintExactScale) { 
-					Console.Write($"    + Exact scale of {name}:");
-				Console.WriteLine(" {0:0.0000000000}", ciphertext.Scale);
-				}
-
-			Console.WriteLine("    + Scale of {0}: {1} bits ", name,
-					Math.Log(ciphertext.Scale, newBase: 2)/*, _decryptor.InvariantNoiseBudget(ciphertext)*/);
-			}
-
-			private static void PrintScale(Plaintext plaintext, String name)
-			{
-				if (!PRINT_SCALE) return;
-                if (PrintExactScale)
-				{
-					Console.Write($"    + Exact scale of {name}:");
-					Console.WriteLine(" {0:0.0000000000}", plaintext.Scale);
-                }
-				
-				Console.WriteLine("    + Scale of {0}: {1} bits", name,
-					Math.Log(plaintext.Scale, newBase: 2));
-			}
-
-			private static List<double> PrintCyprherText(Decryptor decryptor, Ciphertext ciphertext, CKKSEncoder encoder,String name,bool print=false)
-			{
-				if (!PrintCipherText&& !print) return null;
-				Plaintext plainResult = new Plaintext();
-				decryptor.Decrypt(ciphertext, plainResult);
-				List<double> result = new List<double>();
-				encoder.Decode(plainResult, result);
-
-				Console.WriteLine($"{name} TotalValue = {result[0]}");
-				return result;
 			}
 
 

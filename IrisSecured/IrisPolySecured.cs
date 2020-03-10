@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace IrisSecured
 {
-    class IrisSecured
+    class IrisPolySecured
     {
         /*
 		*  Class for a  client of Secured Iris classification
@@ -88,12 +88,12 @@ namespace IrisSecured
             double[][] vectors = new double[3][];
 
             vectors[0] = new[] { 5.1, 3.3, 1.7, 0.5 };
-            vectors[1] = new[] { 4.8, 3.4, 1.9, 0.2 };
+            vectors[1] = new[] { 4.5, 2.3, 1.3, 0.3 };
             vectors[2] = new[] { 5.1, 2.5, 3.0, 1.1 };
 
             double[][] coefficients = new double[1][];
-            coefficients[0] = new double[] { -0.7407784813992192, -0.0025023664254470897, 0.7432808478246663 };
-            double[] intercepts = { 0.9055182807973224 };
+            coefficients[0] = new double[] { -0.008885899026071108, -0.0005100630977269122, 0.009395962123798021 };
+            double[] intercepts = { 1.1358388232934824 };
 
 
             // SEAL parameters client side
@@ -144,7 +144,7 @@ namespace IrisSecured
 
             using (System.IO.StreamWriter file =
                 new System.IO.StreamWriter(
-                   $@"{OutputDir}IrisSecured_{IsParallel}_{DateTime.Now.Day}_{DateTime.Now.ToShortTimeString().ToString().Replace(":", "_")}.txt")
+                   $@"{OutputDir}IrisPolySecured_{IsParallel}_{DateTime.Now.Day}_{DateTime.Now.ToShortTimeString().ToString().Replace(":", "_")}.txt")
             )
             {
 
@@ -261,7 +261,7 @@ namespace IrisSecured
                         featureSizeWithSpace = numberOfFeatures * 2;
                     }
                     
-                    Svc clf = new Svc(vectors, coefficients, intercepts, "Linear", 0.25, 0.0, 3, 40, publicKey/*, secretKey*/, relinKeys, galoisKeys, batchSize,featureSizeWithSpace);
+                    Svc clf = new Svc(vectors, coefficients, intercepts, "Poly", 0.25, 0.0, 3, 40, publicKey/*, secretKey*/, relinKeys, galoisKeys, batchSize,featureSizeWithSpace);
 	                Stopwatch totalTime = new Stopwatch();
 	                totalTime.Start();
                     int start = 0;

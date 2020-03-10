@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualBasic.FileIO;
+﻿using Microsoft.Research.SEAL;
+using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,11 +11,14 @@ namespace SVCUtilities
 {
     public static class SvcUtilities
     {
-		/*
+        private const bool PRINT_SCALE = false;
+        private const bool PrintExactScale = false;
+        private const bool PrintCipherText = false;
+        /*
 		 * Utility class for common static functions used in the solution
 		 */
 
-		//Function for parsing CSV dataset into multidimensional array
+        //Function for parsing CSV dataset into multidimensional array
         public static double[][] LoadFeatures(byte[] bytes, int numberOfFeatuters, ref int numOfRows)
         {
             double[][] features;
@@ -73,6 +77,50 @@ namespace SVCUtilities
                 }
             }
             return jaggedArray;
+        }
+
+
+        //Function for conditionally printing the scale of the ciphertext for debug 
+        public static void PrintScale(Ciphertext ciphertext, String name)
+        {
+            if (!PRINT_SCALE) return;
+            if (PrintExactScale)
+            {
+                Console.Write($"    + Exact scale of {name}:");
+                Console.WriteLine(" {0:0.0000000000}", ciphertext.Scale);
+            }
+
+            Console.WriteLine("    + Scale of {0}: {1} bits ", name,
+                    Math.Log(ciphertext.Scale, newBase: 2)/*, _decryptor.InvariantNoiseBudget(ciphertext)*/);
+        }
+
+        //Function for conditionally printing the scale of the plaintext for debug 
+        public static void PrintScale(Plaintext plaintext, String name)
+        {
+            if (!PRINT_SCALE) return;
+            if (PrintExactScale)
+            {
+                Console.Write($"    + Exact scale of {name}:");
+                Console.WriteLine(" {0:0.0000000000}", plaintext.Scale);
+            }
+
+            Console.WriteLine("    + Scale of {0}: {1} bits", name,
+                Math.Log(plaintext.Scale, newBase: 2));
+        }
+
+
+        //Function for printing the cipher text for debug 
+        public static List<double> PrintCyprherText(Decryptor decryptor, Ciphertext ciphertext, CKKSEncoder encoder, String name, bool print = false)
+        {
+            
+            if (decryptor == null) return null;
+            Plaintext plainResult = new Plaintext();
+            decryptor.Decrypt(ciphertext, plainResult);
+            List<double> result = new List<double>();
+            encoder.Decode(plainResult, result);
+            if (!PrintCipherText && !print) return result;
+            Console.WriteLine($"{name} TotalValue = {result[0]}");
+            return result;
         }
     }
 

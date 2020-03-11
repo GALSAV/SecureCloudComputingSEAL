@@ -348,13 +348,13 @@ namespace IrisSVMSecured
 
             double[][] vectors = new double[3][];
 
-            vectors[0] = new[] {5.1, 3.3, 1.7, 0.5};
-            vectors[1] = new[] {4.8, 3.4, 1.9, 0.2};
-            vectors[2] = new[] {5.1, 2.5, 3.0, 1.1};
+            vectors[0] = new[] { 4.5, 2.3, 1.3, 0.3 };
+            vectors[1] = new[] { 5.1, 3.3, 1.7, 0.5 };
+            vectors[2] = new[] { 5.1, 2.5, 3.0, 1.1 };
 
             double[][] coefficients = new double[1][];
-            coefficients[0] = new double[] {-0.7407784813992192, -0.0025023664254470897, 0.7432808478246663};
-            double[] intercepts = {0.9055182807973224};
+            coefficients[0] = new double[] { -0.07724840262003278, -0.6705185831514366, 0.7477669857714694 };
+            double[] intercepts = { 1.453766563649063 };
 
 
             Console.WriteLine("\n\n SecureSVC : ");

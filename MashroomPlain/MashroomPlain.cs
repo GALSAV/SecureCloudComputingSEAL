@@ -69,7 +69,7 @@ namespace MashroomPlain
                     int estimation = clf.Predict(features[i], out finalResult);
                     Console.WriteLine($"\n ************************************************");
                     Console.WriteLine($"SVC estimation{i} is : {estimation} , result : {finalResult}");
-                    file.WriteLine($"{i} , {estimation} , {finalResult} ");
+                    file.WriteLine($"{i} , {estimation} , {finalResult} "); 
                     Console.WriteLine($"************************************************ \n");
                 }
                 totalTime.Stop();

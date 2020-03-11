@@ -394,13 +394,12 @@ namespace IrisSVMSecured
 
 
             double[][] vectors = new double[3][];
-
-            vectors[0] = new[] {5.1, 3.3, 1.7, 0.5};
-            vectors[1] = new[] { 4.5, 2.3, 1.3, 0.3 };
+            vectors[0] = new[] { 4.5, 2.3, 1.3, 0.3 };
+            vectors[1] = new[] { 5.1, 3.3, 1.7, 0.5 };
             vectors[2] = new[] { 5.1, 2.5, 3.0, 1.1 };
 
             double[][] coefficients = new double[1][];
-            coefficients[0] = new double[] { -0.008885899026071108, -0.0005100630977269122, 0.009395962123798021 };
+            coefficients[0] = new double[] { -0.0005100630977269122, -0.008885899026071108, 0.009395962123798021 };
             double[] intercepts = { 1.1358388232934824 };
 
 

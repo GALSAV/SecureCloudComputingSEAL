@@ -49,9 +49,7 @@ I've used 2 datasets in my work :
 1. [Iris dataset]( https://archive.ics.uci.edu/ml/datasets/Iris) 
 2. [Mushroom dataset](https://archive.ics.uci.edu/ml/datasets/mushroom)
 
-The python code , and data analysis can be found at : [jupyter notebooks](https://github.com/GALSAV/SecureCloudComputingSEAL/tree/master/jupyter notebooks)
-
-
+The python code , and data analysis can be found at : jupyter notebooks folder
 
 # Running Laboratory code
 

@@ -99,7 +99,7 @@ The solution contains the following projects:
 
     Properties -> Application -> Strartup object
 
-    ![image-20200312165303937](D:\Cloud Security\StartupObject.png)
+    ![image-20200312165303937](StartupObject.png)
 
 - **IrisSecured** : Clients code for Iris datasets <u>secured</u>  SIMD high performance inference
 

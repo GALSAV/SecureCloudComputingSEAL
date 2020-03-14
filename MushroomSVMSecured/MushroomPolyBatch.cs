@@ -2,12 +2,8 @@
 using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
-using System.Data.SqlTypes;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using SVCUtilities;
 
@@ -15,7 +11,7 @@ namespace SVM
 {
 
 
-	internal static class ExtensionMethods
+    internal static class ExtensionMethods
 	{
 		internal static T[][] ToJaggedArray<T>(this T[,] twoDimensionalArray)
 		{
@@ -56,7 +52,7 @@ namespace SVM
     class SvmBatchPolyMashroom
     {
 		private const bool   RunSvc      = true;
-		private const bool   RunIris  = false;
+		private const bool   RunMushroom  = false;
 		private const bool   RunMashroom = true;
 
         private const string OutputDir    = @"C:\Output\";
@@ -581,7 +577,7 @@ namespace SVM
 
 
 
-            var bytesMashrooms = IrisSVMSecured.Properties.Resources.mashrooms;
+            var bytesMashrooms = MushroomSVMSecured.Properties.Resources.mashrooms;
             numOfRows = 0;
             features = LoadFeatures(bytesMashrooms, vectorsMashroom[0].Length, ref numOfRows);
 
@@ -591,8 +587,9 @@ namespace SVM
 
 
 
-            int processorCount = Environment.ProcessorCount;
+            int processorCount = 1;//Environment.ProcessorCount;
             Console.WriteLine("Number Of Logical Processors: {0}", processorCount);
+
 
             SecureSvc[] machines = new SecureSvc[processorCount];
             Task[] tasks = new Task[processorCount];

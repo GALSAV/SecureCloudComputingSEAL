@@ -1,2 +1,0 @@
-SecureSVC estimation0 is : 0 
-Average Predict: 655310 microseconds

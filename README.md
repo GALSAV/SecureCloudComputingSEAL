@@ -73,7 +73,10 @@ For output results files. This path can be changed with OutputDir constant varia
 
 #### Project
 
-The solution contains the following projects:
+The solution contains several projects.
+In order to choose a project to run , right click the desired projects and choose **"Set as strartup project"** option.
+
+The projects are:
 
 - **PlainSVC** : For better understanding and performance comparison I’ve implemented the plain version of SVM which is:
 

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29509.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IrisSVMSecured", "IrisSVNSecured\IrisSVMSecured.csproj", "{BAA69801-01B6-4499-A2DD-FEAACE8A6A3F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IrisSVMSecured", "IrisSVMSecured\IrisSVMSecured.csproj", "{BAA69801-01B6-4499-A2DD-FEAACE8A6A3F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{92158F33-65F0-41E1-A804-C59DD51F9E11} = {92158F33-65F0-41E1-A804-C59DD51F9E11}
 	EndProjectSection
